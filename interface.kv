@@ -1,0 +1,186 @@
+
+
+
+<ScreenOne>:
+    FloatLayout:
+
+        BoxLayout:
+            id: boxlayout
+            size_hint: 0.4, 0.08
+            pos_hint:{"top":0.95, "center_x":0.35}
+            Button:
+                text: 'Import ORR'
+                id: import_orr
+                on_press: root.import_orr_single()
+            Button:
+                text: 'Import ORR \nbackground'
+                id: import_orr_backg
+                on_press: root.import_orr_bckg()
+            Button:
+                text: 'Import EIS'
+                id: import_eis
+                on_press: root.import_eis()
+            Button:
+                text: 'Correct data'
+                on_press: root.open_correction_popup()
+            Button:
+                text: 'Analyse Data'
+                on_press: root.analyse_data()
+            Button:
+                text: 'Plot Data'
+            Button:
+                text: 'Export Data'
+                on_press: root.export_data()
+
+        BoxLayout:
+            id: boxlayout
+            orientation: 'vertical'
+            size_hint: 0.18, 0.7
+            pos_hint:{"top":1, "center_x":0.05}
+            Button:
+                text: 'Clear Plot'
+                on_press: root.clear_plot()
+            Button:
+            Button:
+            Button:
+            Button:
+            Button:
+        BoxLayout:
+            orientation: 'vertical'
+            id: plotter
+            size_hint: 0.4, 0.65
+            pos_hint: {"top": 0.85, "center_x": 0.35}
+            canvas.before:
+                Color:
+                    rgba: .5, .5, .5, 1
+                Line:
+                    width: 1
+                    rectangle: self.x, self.y, self.width, self.height
+        BoxLayout:
+            size_hint: 0.102, 0.05
+            pos_hint: {"top": 0.195, "center_x": 0.5}
+            Button:
+                text: 'save as png'
+                on_press: root.safe_plot_to_png()
+        BoxLayout:
+            orientation: 'vertical'
+            id: messages
+            size_hint: 0.2, 0.2
+            pos_hint: {"top": 0.85, "center_x": 0.85}
+            canvas.before:
+                Color:
+                    rgba: .5, .5, .5, 1
+                Line:
+                    width: 1
+                    rectangle: self.x, self.y, self.width, self.height
+            Label:
+                text: 'Current Data Files'
+                color: 0,0,0,1
+                font_size: 18
+                pos_hint:{"top" : 1, "center_x" : 0.5}
+                size_hint: 1,0.1
+                halign: "center"
+        BoxLayout:
+            orientation: 'vertical'
+            id: analysis_params
+            size_hint: 0.17, 0.3
+            pos_hint: {"top": 0.85, "center_x": 2.65}
+            canvas.before:
+                Color:
+                    rgba: .5, .5, .5, 1
+                Line:
+                    width: 1
+                    rectangle: self.x, self.y, self.width, self.height
+            Label:
+                text: 'Analysis Parameters'
+                font_size: 18
+                color: 0,0,0,1
+            Label:
+                text: 'onset potential threshold'
+                color: 0,0,0,1
+            TextInput:
+                text: ''
+                hint_text: 'default: 5.0  (must be a float number)'
+                id: onset_txtin
+                input_filter: 'float'
+            Label:
+                text: 'j_lim threshold'
+                color: 0,0,0,1
+            TextInput:
+                text: ''
+                hint_text: 'default: 2  (must be a float number)'
+                id: jlim_txtin
+                input_filter: 'float'
+            Button:
+                text: 'Recalculate'
+                on_press: root.recalculate_analysis()
+
+
+
+
+<RV>: #recycleview class
+    viewclass: 'Label'
+    RecycleBoxLayout:
+        default_size: None, dp(56)
+        orientation: 'vertical'
+        default_size_hint: 1 , None
+        size_hint_y: None
+        height: self.minimum_height
+
+
+
+
+<DataCorrection>: #popup class
+    title: 'Data Correction'
+    size_hint: 0.35, 0.3
+    BoxLayout:
+        orientation: 'vertical'
+        BoxLayout:
+            id: electrode_corr
+            orientation: 'horizontal'
+            CheckBox:
+                id: electrode
+            Label:
+                text: 'Electrode calibration correction'
+            Label:
+                text: 'available'
+        BoxLayout:
+            name: 'background_corr'
+            id: background_corr
+            orientation: 'horizontal'
+            CheckBox:
+                on_active: root.on_activation(self)
+                id: bckg
+            Label:
+                text: 'Background correction'
+
+        BoxLayout:
+            name: 'eis_corr'
+            id: eis_corr
+            orientation: 'horizontal'
+            CheckBox:
+                id: eis
+                on_active: root.on_activation(self)
+            Label:
+                text: 'Electrolyte resistance correction'
+        BoxLayout:
+            orientation: 'horizontal'
+            Button:
+                text: 'Correct ORR data'
+                on_press:  root.on_corr_confirmation()
+
+<Manager>:
+    id: screen_manager
+
+    screen_one: screen_one
+    screen_two: screen_two
+
+    ScreenOne:
+        id: screen_one
+        name: 'screen1'
+        manager: screen_manager
+
+    ScreenTwo:
+        id: screen_two
+        name: 'screen2'
+        manager: screen_manager
