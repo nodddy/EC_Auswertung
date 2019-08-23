@@ -3,10 +3,12 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.properties import ObjectProperty
 from kivy.core.window import Window
 from kivy.uix.label import Label
+import kivy.garden
 from kivy.garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg
 from kivy.uix.popup import Popup
 from kivy.uix.recycleview import RecycleView
 
+import tkinter
 import tkfilebrowser
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -282,7 +284,7 @@ class ScreenOne(Screen):
                 return electrolyte_res['Real'].iloc[0]
 
             electrolyte_res = find_electrolyte_res(EIS_data)
-            ORR_data['Pot'] = ORR_data['Pot'] - (ORR_data['Disk'] / electrolyte_res)
+            ORR_data['Pot'] = ORR_data['Pot'] - (ORR_data['Disk'] * electrolyte_res)
             return ORR_data
 
         def correct_electrode(data, kalibrierung=0, pH=1):
@@ -447,7 +449,8 @@ class ScreenOne(Screen):
         corr_orr_file_name = data.orr['file_name'] + '_corrected.txt'
         anodic_file_name = data.orr['file_name'] + '_anodic.txt'
         cathodic_file_name = data.orr['file_name'] + '_cathodic.txt'
-        parameters_file_name = data.orr['file_name'] + '_parameters_anodic.txt'
+        parameters_ano_file_name = data.orr['file_name'] + '_parameters_anodic.txt'
+        parameters_cat_file_name = data.orr['file_name'] + '_parameters_cathodic.txt'
 
         try:
             data.orr['corrected'].to_csv(dir / corr_orr_file_name, sep='\t', index=False, header=True)
@@ -456,7 +459,8 @@ class ScreenOne(Screen):
         data.anodic.to_csv(dir / anodic_file_name, sep='\t', index=False, header=True)
         data.cathodic.to_csv(dir / cathodic_file_name, sep='\t', index=False, header=True)
         try:
-            write_to_file(data.parameters[1], dir / parameters_file_name)
+            write_to_file(data.parameters[1], dir / parameters_ano_file_name)
+            write_to_file(data.parameters[2], dir / parameters_cat_file_name)
         except TypeError:
             return
 
