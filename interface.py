@@ -3,12 +3,10 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.properties import ObjectProperty
 from kivy.core.window import Window
 from kivy.uix.label import Label
-import kivy.garden
 from kivy.garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg
 from kivy.uix.popup import Popup
 from kivy.uix.recycleview import RecycleView
 
-import tkinter
 import tkfilebrowser
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -16,6 +14,29 @@ from statistics import mean
 import os
 import numpy as np
 from pathlib import Path
+from configparser import ConfigParser
+
+
+class Config:
+    """Interact with configuration variables."""
+
+    configParser = ConfigParser()
+    configFilePath = (os.path.join(os.getcwd(), 'config.ini'))
+
+    @classmethod
+    def initialize(cls):
+        """Start config by reading config.ini."""
+        cls.configParser.read(cls.configFilePath)
+
+    @classmethod
+    def glob(cls, key):
+        """Get prod values from config.ini."""
+        return cls.configParser.get('GLOBAL', key)
+
+    @classmethod
+    def units(cls, key):
+        """Get prod values from config.ini."""
+        return cls.configParser.get('UNITS', key)
 
 
 class Data:
@@ -69,6 +90,9 @@ class Data:
 
     def cathodic(self):
         return self.cathodic
+
+    def convert_units(self):
+        pass
 
     @staticmethod
     def reduce_data(dataset, window=3):
@@ -442,6 +466,9 @@ class ScreenOne(Screen):
                 csv += line
             return csv
 
+        def rename_header(df, dict):
+            return df.rename(columns=dict, inplace=True)
+
         if data.orr is None:
             return
 
@@ -451,6 +478,13 @@ class ScreenOne(Screen):
         cathodic_file_name = data.orr['file_name'] + '_cathodic.txt'
         parameters_ano_file_name = data.orr['file_name'] + '_parameters_anodic.txt'
         parameters_cat_file_name = data.orr['file_name'] + '_parameters_cathodic.txt'
+
+        orr_header_dict = {'Pot': 'Potential [{}]'.format(Config.units('POTENTIAL')),
+                           'Disk': 'Disk Current [{}]'.format(Config.units('CURRENT')),
+                           'Ring': 'Ring Current [{}]'.format(Config.units('CURRENT'))}
+
+        for item in [data.anodic, data.cathodic, data.orr['corrected']]:
+            rename_header(item, orr_header_dict)
 
         try:
             data.orr['corrected'].to_csv(dir / corr_orr_file_name, sep='\t', index=False, header=True)
@@ -547,6 +581,7 @@ class Manager(ScreenManager):
 
 class InterfaceApp(App):
     Window.maximize()
+    Config.initialize()
 
     def build(self):
         global manager
