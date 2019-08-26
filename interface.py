@@ -127,15 +127,15 @@ class Data:
                 scan1.reset_index(inplace=True)
                 scan2 = input.query('Scan == 3')
                 scan2.reset_index(inplace=True)
-                data = pd.DataFrame()
-                data['Pot'] = (scan1['Potential applied (V)'] + scan2['Potential applied (V)']) / 2
-                data['Disk'] = (scan1['WE(1).Current (A)'] + scan2['WE(1).Current (A)']) / 2
+                input_data = pd.DataFrame()
+                input_data['Pot'] = (scan1['Potential applied (V)'] + scan2['Potential applied (V)']) / 2
+                input_data['Disk'] = (scan1['WE(1).Current (A)'] + scan2['WE(1).Current (A)']) / 2
                 try:
-                    data['Ring'] = (scan1['WE(2).Current (A)'] + scan2['WE(2).Current (A)']) / 2
+                    input_data['Ring'] = (scan1['WE(2).Current (A)'] + scan2['WE(2).Current (A)']) / 2
                 except KeyError:
                     pass
-                data.reset_index(inplace=True)
-                return data
+                input_data.reset_index(inplace=True)
+                return input_data
 
             if data_descriptor == 'eis':
                 formatted_data = format_eis(input)
