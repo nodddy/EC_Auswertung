@@ -4,6 +4,7 @@
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/EC Analysis" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/EC Analysis1" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/EC_Auswertung" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/dist/EC Analysis" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/temp" vcs="Git" />
   </component>

@@ -7,8 +7,10 @@ cwd = Path(os.getcwd())
 if 'interface.py' in os.listdir(cwd):
     os.system("python interface.py")
 else:
-    Repo.clone_from('https://github.com/nodddy/EC_Auswertung', cwd / 'EC Analysis')
-    os.rename(cwd / 'executable.exe', cwd / 'EC Analysis' / 'executable.exe')
+    clone_cmd = "git clone https://github.com/nodddy/EC_Auswertung"
+    os.system(clone_cmd)
+    os.rename(cwd / 'EC_Auswertung', cwd / 'EC Analysis')
+    os.rename(cwd / 'AnalysisTool.exe', cwd / 'EC Analysis' / 'AnalysisTool.exe')
     os.chdir(cwd / 'EC Analysis')
     os.system("python setup.py install")
     os.system("python interface.py")
