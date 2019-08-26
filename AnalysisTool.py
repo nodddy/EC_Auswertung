@@ -1,5 +1,4 @@
 import os
-from git import Repo
 from pathlib import Path
 
 cwd = Path(os.getcwd())
@@ -13,4 +12,5 @@ else:
     os.rename(cwd / 'AnalysisTool.exe', cwd / 'EC Analysis' / 'AnalysisTool.exe')
     os.chdir(cwd / 'EC Analysis')
     os.system("python setup.py install")
+    os.system("garden install matplotlib")
     os.system("python interface.py")

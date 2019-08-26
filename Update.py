@@ -14,6 +14,8 @@ for item in os.listdir(cwd/'EC_Auswertung'):
     except shutil.Error:
         pass
 
+os.system("python setup.py install")
+os.system("garden install matplotlib")
 os.system('rmdir /S /Q "{}"'.format(cwd/'EC_Auswertung'))
 
-# os.system("python setup.py install")
+
