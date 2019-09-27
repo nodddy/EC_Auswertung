@@ -30,12 +30,12 @@ class Config:
 
     @classmethod
     def glob(cls, key):
-        """Get prod values from config.ini."""
+        """Get global values from config.ini."""
         return cls.configParser.get('GLOBAL', key)
 
     @classmethod
     def units(cls, key):
-        """Get prod values from config.ini."""
+        """Get units values from config.ini."""
         return cls.configParser.get('UNITS', key)
 
 
@@ -91,17 +91,13 @@ class Data:
     def cathodic(self):
         return self.cathodic
 
-    def convert_units(self):
-        pass
-
     @staticmethod
     def reduce_data(dataset, window=3):
         smoothed = dataset.rolling(window=window).mean()
         return smoothed.iloc[::5].copy(deep=True).dropna()
 
     # data_descriptor is the object of the data stored in this class (data.orr, data.orr_bckg, data.eis)
-    @staticmethod
-    def import_data(data_descriptor):
+    def import_data(self, data_descriptor):
 
         def import_from_path():
             path = tkfilebrowser.askopenfilename(
@@ -128,12 +124,23 @@ class Data:
                 scan2 = input.query('Scan == 3')
                 scan2.reset_index(inplace=True)
                 input_data = pd.DataFrame()
-                input_data['Pot'] = (scan1['Potential applied (V)'] + scan2['Potential applied (V)']) / 2
-                input_data['Disk'] = (scan1['WE(1).Current (A)'] + scan2['WE(1).Current (A)']) / 2
+                input_data['Pot'] = ((scan1['Potential applied (V)'] + scan2['Potential applied (V)']) / 2)
+                input_data['Disk'] = (((scan1['WE(1).Current (A)'] + scan2[
+                    'WE(1).Current (A)']) / 2) * 1000) / float(Config.glob('ELECTRODE_AREA'))
                 try:
-                    input_data['Ring'] = (scan1['WE(2).Current (A)'] + scan2['WE(2).Current (A)']) / 2
+                    input_data['Ring'] = (((scan1['WE(2).Current (A)'] + scan2[
+                        'WE(2).Current (A)']) / 2) * 1000) / float(Config.glob('ELECTRODE_AREA'))
                 except KeyError:
                     pass
+
+                half_scan_end = int(len(input_data.index) / 2)
+                anodic_scan = input_data.iloc[40:half_scan_end - 40]
+                cathodic_scan = input_data.iloc[half_scan_end + 40:-40]
+                cathodic_scan = cathodic_scan[::-1]
+
+                data.set_anodic(anodic_scan)
+                data.set_cathodic(cathodic_scan)
+
                 input_data.reset_index(inplace=True)
                 return input_data
 
@@ -166,15 +173,15 @@ class Plotter:
     def plot_import_orr(self, data):
         plt.cla()
         plt.plot(data['formatted']['Pot'], data['formatted']['Disk'])
-        plt.xlabel('Potential [V]')
-        plt.ylabel('Current[A]')
+        plt.xlabel('Potential [mV]')
+        plt.ylabel('Current density [mA/cm2]')
         return self.overwrite_plot()
 
     def plot_corr_orr(self):
         dat = data.orr
         plt.plot(dat['corrected']['Pot'], dat['corrected']['Disk'])
         plt.xlabel('Potential [V]')
-        plt.ylabel('Current[A]')
+        plt.ylabel('Current density [mA/cm2]')
         return self.overwrite_plot()
 
     def plot_parameters(self, anodic_scan, cathodic_scan):
@@ -198,14 +205,8 @@ class Plotter:
         plt.scatter(onset_point_anod['Pot'], onset_point_anod['Disk'])
         plt.scatter(onset_point_cath['Pot'], onset_point_cath['Disk'])
 
-        j_lim_anod = param[1]['j_lim']
-        j_lim_cath = param[2]['j_lim']
-        j_lim_point_anod = anodic_scan.query('Disk == @j_lim_anod')
-        j_lim_point_cath = cathodic_scan.query('Disk == @j_lim_cath')
-        plt.scatter(j_lim_point_anod['Pot'], j_lim_point_anod['Disk'])
-        plt.scatter(j_lim_point_cath['Pot'], j_lim_point_cath['Disk'])
         plt.xlabel('Potential [V]')
-        plt.ylabel('Current[A]')
+        plt.ylabel('Current density [mA/cm2]')
 
         # param[1]['tafel'] = param[1]['tafel'].rolling(window=30).mean()
         # plt.scatter(param[1]['tafel']['Pot'], param[1]['tafel']['Tafel'])
@@ -244,27 +245,18 @@ class ScreenOne(Screen):
 
     def import_orr_single(self):
         try:
-            data.orr = data.import_data('orr')
+            data.set_orr(data.import_data('orr'))
         except FileNotFoundError:
             return
         if self.active_RV is not None:
             RV.on_update(self.active_RV)
         self.active_data_RV()
-        self.ids['analysis_params'].pos_hint = {"top": 0.85, "center_x": 2.65}
         plotter.plot_import_orr(data.orr)
-        half_scan_end = int(len(data.orr['formatted'].index) / 2)
-        anodic_scan = data.orr['formatted'].iloc[40:half_scan_end - 40]
-        cathodic_scan = data.orr['formatted'].iloc[half_scan_end + 40:-40]
-        cathodic_scan = cathodic_scan[::-1]
-
-        data.set_anodic(anodic_scan)
-        data.set_cathodic(cathodic_scan)
-
         return
 
     def import_orr_bckg(self):
         try:
-            data.orr_bckg = data.import_data('orr')
+            data.set_orr_bckg(data.import_data('orr'))
         except FileNotFoundError:
             print('No ORR data found')
             return
@@ -275,7 +267,7 @@ class ScreenOne(Screen):
 
     def import_eis(self):
         try:
-            data.eis = data.import_data('eis')
+            data.set_eis(data.import_data('eis'))
         except FileNotFoundError:
             print('No EIS data found')
             return
@@ -303,12 +295,12 @@ class ScreenOne(Screen):
 
         def correct_electrolyte_res(ORR_data, EIS_data):
             def find_electrolyte_res(data):
-                EIS_min = data['Imag'].min()
-                electrolyte_res = data.query('Imag == @EIS_min', inplace=False)
+                electrolyte_res = data.iloc[(data['Imag']).abs().argsort()[:2]]
                 return electrolyte_res['Real'].iloc[0]
 
             electrolyte_res = find_electrolyte_res(EIS_data)
-            ORR_data['Pot'] = ORR_data['Pot'] - (ORR_data['Disk'] * electrolyte_res)
+            ORR_data['Pot'] = ORR_data['Pot'] - (
+                    (ORR_data['Disk'] / 1000) * electrolyte_res * float(Config.glob('ELECTRODE_AREA')))
             return ORR_data
 
         def correct_electrode(data, kalibrierung=0, pH=1):
@@ -338,8 +330,8 @@ class ScreenOne(Screen):
         data.set_orr(orr_data)
 
         half_scan_end = int(len(data.orr['corrected'].index) / 2)
-        anodic_scan = data.orr['corrected'].iloc[40:half_scan_end - 40]
-        cathodic_scan = data.orr['corrected'].iloc[half_scan_end + 40:-40]
+        anodic_scan = data.orr['corrected'].iloc[60:half_scan_end - 60]
+        cathodic_scan = data.orr['corrected'].iloc[half_scan_end + 60:-60]
         cathodic_scan = cathodic_scan[::-1]
 
         data.set_anodic(anodic_scan)
@@ -373,48 +365,36 @@ class ScreenOne(Screen):
             inflection_point = input_data.query('Diff1 == @Diff_max', inplace=False)
             return inflection_point['Pot'].iloc[0]
 
-        def find_onset(input_data, onset_threshold):
-            reversed_data = input_data.iloc[:: -1].copy(deep=True)
-            values = []
-            for value in reversed_data['Diff1']:
-                if pd.isnull(value):
-                    continue
-                values.append(value)
-                mean_value = mean(values)
-                if value / mean_value > onset_threshold:
-                    last_index = input_data.query('Diff1 == @value')['index'].iloc[0]
-                    return input_data.query('Diff1 == @value')['Pot'].iloc[0]
+        def find_onset(input_data):
+            df = pd.DataFrame()
+            curr_max = abs(input_data['Disk']).max()
+            curr_min = abs(input_data['Disk']).min()
+            df['Disk'] = (abs(input_data['Disk']) - curr_min) / (curr_max - curr_min)
+            df['Pot'] = input_data['Pot']
+            onset = df.query('Disk < 0.02', inplace=False)
+            return onset['Pot'].iloc[0]
 
         def find_peroxide_yield(input_data, N):
             data = input_data.query('0.1 < Pot < 0.7', inplace=False).copy(deep=True)
-            data['PeroxideYield'] = ((2 * abs(data['Ring']) / N) / (
-                    abs(data['Disk']) + abs(data['Ring']) / N)) * 100
+            data['PeroxideYield'] = ((2 * (abs(data['Ring'] / N))) / (
+                    abs(data['Disk']) + (abs(data['Ring']) / N))) * 100
             return data['PeroxideYield'].mean()
 
-        def find_fixed_potential(potentials_lst, input_data):
-            output_dict = {}
-            for potential in potentials_lst:
+        def find_activity(input_data):
+            def find_jlim(input_data):
+                return -abs(input_data['Disk']).max()
+
+            def find_fixed_potential(input_data, potential):
                 current_df = input_data.iloc[(input_data['Pot'] - potential).abs().argsort()[:2]]
                 current = current_df['Disk'].mean()
-                output_dict[potential] = current
-            return output_dict
+                return current
 
-        def find_jlim(input_data, jlim_threshold):
-            first_pot = None
-            first_cur = None
-            for value in input_data.iterrows():
-                if first_pot is None:
-                    first_pot = value[1]['Pot']
-                    first_cur = value[1]['Disk']
-                else:
-                    diff_pot = value[1]['Pot'] - first_pot
-                    diff_cur = value[1]['Disk'] - first_cur
-                    diff = diff_cur / diff_pot
-                    if diff > jlim_threshold:
-                        return value[1]['Disk']
-            return first_pot
+            j = find_fixed_potential(input_data, 0.75)
+            j_lim = find_jlim(input_data)
+            return (j * j_lim) / (j_lim - j)
 
-        def find_Tafel(input, j_lim):
+        def find_Tafel(input):
+            j_lim = -abs(input['Disk']).max()
             dat = input.query('0.4 < Pot', inplace=False)
             dat['Tafel'] = (dat['Disk'] * j_lim) / (j_lim - dat['Disk']) * (-1)
             dat['Tafel'] = np.log10(dat['Tafel'])
@@ -422,30 +402,35 @@ class ScreenOne(Screen):
             dat['Diff'] = (dat['Tafel'].diff() / dat['Pot'].diff())
             return dat
 
-        fixed_potentials = [0.75, 0.8]
+        def find_n(input_data, N):
+            df = input_data.query('0.1 < Pot < 0.7', inplace=False).copy(deep=True)
+            df['n'] = (4 * df['Disk']) / (df['Disk'] + (df['Ring'] / N))
+            return df['n'].mean()
+
+        # 'tafel': find_Tafel(scan)
         for scan in [reduced_anodic, reduced_cathodic]:
-            halfwave_pot = find_inflectionpoint(scan)
-            onset = find_onset(scan, onset_threshold)
-            peroxide_yield = find_peroxide_yield(scan, 0.37)
-            fixed_potential_output = find_fixed_potential(fixed_potentials, scan)
-            j_lim = find_jlim(scan, jlim_threshold)
-            # tafel_data = find_Tafel(scan, j_lim)
-            parameters.append(
-                {'halfwave_pot': halfwave_pot, 'onset': onset, 'peroxide_yield': peroxide_yield, 'j_lim': j_lim,
-                 'fixed_potentials': fixed_potential_output})
+            parameters.append({'halfwave_pot': find_inflectionpoint(scan),
+                               'onset': find_onset(scan),
+                               'peroxide_yield': find_peroxide_yield(scan, 0.37),
+                               'n': find_n(scan, 0.37),
+                               'activity': find_activity(scan)})
         data.set_parameters(parameters)
-        self.ids['analysis_params'].pos_hint = {"top": 0.85, "center_x": 0.65}
+        self.show_parameters()
         return plotter.plot_parameters(reduced_anodic, reduced_cathodic)
 
-    def recalculate_analysis(self):
-        onset_th_str = self.ids['onset_txtin'].text
-        jlim_th_str = self.ids['jlim_txtin'].text
-        param_dict = {}
-        if onset_th_str != '':
-            param_dict['onset_threshold'] = float(onset_th_str)
-        if jlim_th_str != '':
-            param_dict['jlim_threshold'] = float(jlim_th_str) / 10000
-        return self.analyse_data(**param_dict)
+    def show_parameters(self):
+        root = self.ids['parameters']
+        root.pos_hint = {"top": 0.6, "center_x": 0.82}
+        root.children[1].clear_widgets()
+        root.children[1].add_widget(Label(text='anodic', bold=True, color=(0, 0, 0, 1)))
+        root.children[2].clear_widgets()
+        root.children[2].add_widget(Label(text='cathodic', bold=True, color=(0, 0, 0, 1)))
+        params = data.parameters
+        for i in range(1, 3):
+            for key in params[i]:
+                val = params[i][key].round(3)
+                lbl = Label(text=str(val), color=(0, 0, 0, 1))
+                root.children[i].add_widget(lbl)
 
     # Export corrected data and summary to txt and csv
     # Export all plots to png
@@ -479,13 +464,15 @@ class ScreenOne(Screen):
         parameters_ano_file_name = data.orr['file_name'] + '_parameters_anodic.txt'
         parameters_cat_file_name = data.orr['file_name'] + '_parameters_cathodic.txt'
 
-        orr_header_dict = {'Pot': 'Potential [{}]'.format(Config.units('POTENTIAL')),
-                           'Disk': 'Disk Current [{}]'.format(Config.units('CURRENT')),
-                           'Ring': 'Ring Current [{}]'.format(Config.units('CURRENT'))}
+        orr_header_dict = {'Pot': 'Potential [V]',
+                           'Disk': 'Disk Current density[mA/cm2]',
+                           'Ring': 'Ring Current density[mA/cm2]'}
 
         for item in [data.anodic, data.cathodic, data.orr['corrected']]:
-            rename_header(item, orr_header_dict)
-
+            try:
+                rename_header(item, orr_header_dict)
+            except AttributeError:
+                pass
         try:
             data.orr['corrected'].to_csv(dir / corr_orr_file_name, sep='\t', index=False, header=True)
         except AttributeError:
