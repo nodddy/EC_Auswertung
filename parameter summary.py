@@ -49,7 +49,7 @@ def analyse_data(data, parameters):
             for param in parameters:
                 value_before = data[date][mode]['before'][str(param)].iloc[0]
                 value_after = data[date][mode]['after'][str(param)].iloc[0]
-                loss = 1 - (value_after / value_before)
+                loss = (1 - (value_after / value_before))*100
                 loss_dict[date][mode][str(param)] = loss
                 loss_dict[date][mode][str(param) + '_value_before'] = value_before
                 loss_dict[date][mode][str(param) + '_value_after'] = value_after

@@ -3,6 +3,8 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.properties import ObjectProperty
 from kivy.core.window import Window
 from kivy.uix.label import Label
+from kivy.uix.button import Button
+from kivy.uix.dropdown import DropDown
 from kivy.garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg
 from kivy.uix.popup import Popup
 from kivy.uix.recycleview import RecycleView
@@ -158,9 +160,52 @@ class Data:
         return {'file_name': file_name, 'raw': raw_data, 'formatted': formatted_data, 'corrected': None, 'path': path}
 
 
+data = Data()
+
+
 class Plotter:
     active_screen = None
     plotter_widget = None
+    current_plot = None
+
+    plot_dict = {'raw ORR': {'data': [{'x': 'data.orr["formatted"]["Pot"]',
+                                       'y': "data.orr['formatted']['Disk']"}],
+                             'x_label': 'Pot vs. RHE [V]',
+                             'y_label': 'Disk Current Density [mA/cm2]',
+                             'title': 'raw ORR',
+                             'clear_fig': False},
+                 'ORR background': {'data': [{'x': 'data.orr_bckg["formatted"]["Pot"]',
+                                              'y': "data.orr_bckg['formatted']['Disk']"}],
+                                    'x_label': 'Pot vs. RHE [V]',
+                                    'y_label': 'Disk Current Density [mA/cm2]',
+                                    'title': 'ORR background',
+                                    'clear_fig': True},
+                 'EIS': {'data': [{'x': 'data.eis["formatted"]["Real"]',
+                                   'y': 'data.eis["formatted"]["Imag"]'}],
+                         'x_label': "Real Z' (\u03A9)",
+                         'y_label': "Imaginary -Z'' (\u03A9)",
+                         'title': 'EIS',
+                         'clear_fig': True},
+                 'ORR corrected': {'data': [{'x': 'data.orr["corrected"]["Pot"]',
+                                             'y': 'data.orr["corrected"]["Disk"]'}],
+                                   'x_label': 'Pot vs. RHE [V]',
+                                   'y_label': 'Disk Current Density [mA/cm2]',
+                                   'title': 'ORR corrected',
+                                   'clear_fig': False},
+                 'ORR analysis': {'data': [{'x': "data.anodic['Pot']",
+                                            'y': "data.anodic['Disk']"},
+                                           {'x': "data.cathodic['Pot']",
+                                            'y': "data.cathodic['Disk']"}],
+                                  'x_label': 'Pot vs. RHE [V]',
+                                  'y_label': 'Disk Current Density [mA/cm2]',
+                                  'title': 'ORR analysis',
+                                  'clear_fig': True,
+                                  'parameters': True},
+                 'Tafel plot': {'data': [{'x': '', 'y': ''}],
+                                'x_label': '',
+                                'y_label': '',
+                                'title': 'Tafel plot',
+                                'clear_fig': True}}
 
     @classmethod
     def set_active_screen(cls, screen):
@@ -170,47 +215,41 @@ class Plotter:
         self.active_screen.ids['plotter'].clear_widgets()
         self.active_screen.ids['plotter'].add_widget(FigureCanvasKivyAgg(plt.gcf()))
 
-    def plot_import_orr(self, data):
-        plt.cla()
-        plt.plot(data['formatted']['Pot'], data['formatted']['Disk'])
-        plt.xlabel('Potential [mV]')
-        plt.ylabel('Current density [mA/cm2]')
+    def plot(self, plot_name):
+        if plot_name not in self.plot_dict.keys():
+            return
+
+        if self.plot_dict[plot_name]['clear_fig'] is True:
+            plt.cla()
+        if self.current_plot is not None:
+            if self.plot_dict[self.current_plot]['clear_fig'] is True:
+                plt.cla()
+        self.current_plot = plot_name
+
+        plt.xlabel(self.plot_dict[plot_name]['x_label'])
+        plt.ylabel(self.plot_dict[plot_name]['y_label'])
+        plt.title(self.plot_dict[plot_name]['title'], pad=25, fontdict={'fontsize': 18})
+        for dataset in self.plot_dict[plot_name]['data']:
+            plt.plot(eval(dataset['x']), eval(dataset['y']))
+        if 'parameters' in self.plot_dict[plot_name].keys():
+            self.plot_parameters()
         return self.overwrite_plot()
 
-    def plot_corr_orr(self):
-        dat = data.orr
-        plt.plot(dat['corrected']['Pot'], dat['corrected']['Disk'])
-        plt.xlabel('Potential [V]')
-        plt.ylabel('Current density [mA/cm2]')
-        return self.overwrite_plot()
+    def plot_parameters(self):
 
-    def plot_parameters(self, anodic_scan, cathodic_scan):
-        plt.cla()
-        anod = data.anodic
-        cath = data.cathodic
-        plt.plot(cath['Pot'], cath['Disk'])
-        plt.plot(anod['Pot'], anod['Disk'])
-        param = data.parameters
-        halfwave_anod = param[1]['halfwave_pot']
-        halfwave_cath = param[2]['halfwave_pot']
-        hw_point_anod = anodic_scan.query('Pot == @halfwave_anod')
-        hw_point_cath = cathodic_scan.query('Pot == @halfwave_cath')
-        plt.scatter(hw_point_anod['Pot'], hw_point_anod['Disk'])
-        plt.scatter(hw_point_cath['Pot'], hw_point_cath['Disk'])
+        def get_points(pot_value, dataset):
+            return dataset.iloc[(dataset['Pot'] - pot_value).abs().argsort()[:1]]
 
-        onset_anod = param[1]['onset']
-        onset_cath = param[2]['onset']
-        onset_point_anod = anodic_scan.query('Pot == @onset_anod')
-        onset_point_cath = cathodic_scan.query('Pot == @onset_cath')
-        plt.scatter(onset_point_anod['Pot'], onset_point_anod['Disk'])
-        plt.scatter(onset_point_cath['Pot'], onset_point_cath['Disk'])
+        anod_list = [data.parameters[1]['halfwave_pot'], data.parameters[1]['onset']]
+        cath_list = [data.parameters[2]['halfwave_pot'], data.parameters[2]['onset']]
 
-        plt.xlabel('Potential [V]')
-        plt.ylabel('Current density [mA/cm2]')
-
-        # param[1]['tafel'] = param[1]['tafel'].rolling(window=30).mean()
-        # plt.scatter(param[1]['tafel']['Pot'], param[1]['tafel']['Tafel'])
-        return self.overwrite_plot()
+        for item in anod_list:
+            row = get_points(item, data.anodic)
+            plt.scatter(row['Pot'], row['Disk'])
+        for item in cath_list:
+            row = get_points(item, data.cathodic)
+            plt.scatter(row['Pot'], row['Disk'])
+        return
 
 
 class ScreenOne(Screen):
@@ -222,6 +261,19 @@ class ScreenOne(Screen):
         self.active_RV = None
         Plotter.set_active_screen(self)
 
+    def add_plot_button(self, btn_text):
+        self.ids['plot_spinner'].values.append(btn_text)
+
+    @staticmethod
+    def plot_from_spinner(value):
+        plotter.plot(value)
+
+    def clear_plot_spinner(self):
+        self.ids['plot_spinner'].values = []
+
+    def import_mean_orr(self):
+        pass
+
     def clear_plot(self):
         plt.cla()
         plt.xlabel('Potential [V]')
@@ -232,10 +284,10 @@ class ScreenOne(Screen):
         if data.orr is None:
             return
 
-        dir = Path(tkfilebrowser.asksaveasfilename(initialdir=data.folder) + '.png')
-        if dir == '.png':
+        path = Path(tkfilebrowser.asksaveasfilename(initialdir=data.folder) + '.png')
+        if path == '.png':
             return
-        plt.savefig(fname=str(dir), format='png')
+        return plt.savefig(fname=str(path), format='png')
 
     def active_data_RV(self):
         widget = RV(data.orr, data.orr_bckg, data.eis)
@@ -251,7 +303,9 @@ class ScreenOne(Screen):
         if self.active_RV is not None:
             RV.on_update(self.active_RV)
         self.active_data_RV()
-        plotter.plot_import_orr(data.orr)
+        self.clear_plot_spinner()
+        self.add_plot_button('raw ORR')
+        plotter.plot('raw ORR')
         return
 
     def import_orr_bckg(self):
@@ -263,6 +317,7 @@ class ScreenOne(Screen):
         if self.active_RV is not None:
             RV.on_update(self.active_RV)
         self.active_data_RV()
+        self.add_plot_button('ORR background')
         return
 
     def import_eis(self):
@@ -274,6 +329,7 @@ class ScreenOne(Screen):
         if self.active_RV is not None:
             RV.on_update(self.active_RV)
         self.active_data_RV()
+        self.add_plot_button('EIS')
         return
 
     def open_correction_popup(self):
@@ -336,7 +392,9 @@ class ScreenOne(Screen):
 
         data.set_anodic(anodic_scan)
         data.set_cathodic(cathodic_scan)
-        plotter.plot_corr_orr()
+        # plotter.plot_corr_orr()
+        self.add_plot_button('ORR corrected')
+        plotter.plot('ORR corrected')
         return
 
     # get half-wave potential,
@@ -399,7 +457,6 @@ class ScreenOne(Screen):
             dat['Tafel'] = (dat['Disk'] * j_lim) / (j_lim - dat['Disk']) * (-1)
             dat['Tafel'] = np.log10(dat['Tafel'])
             dat = dat.iloc[::20, :]
-            dat['Diff'] = (dat['Tafel'].diff() / dat['Pot'].diff())
             return dat
 
         def find_n(input_data, N):
@@ -416,7 +473,9 @@ class ScreenOne(Screen):
                                'activity': find_activity(scan)})
         data.set_parameters(parameters)
         self.show_parameters()
-        return plotter.plot_parameters(reduced_anodic, reduced_cathodic)
+        self.add_plot_button('ORR analysis')
+        plotter.plot('ORR analysis')
+        return
 
     def show_parameters(self):
         root = self.ids['parameters']
@@ -558,7 +617,6 @@ class DataCorrection(Popup):
 
 
 plotter = Plotter()
-data = Data()
 
 
 class Manager(ScreenManager):

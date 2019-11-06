@@ -1,6 +1,4 @@
 
-
-
 <ScreenOne>:
     FloatLayout:
 
@@ -26,11 +24,18 @@
             Button:
                 text: 'Analyse Data'
                 on_press: root.analyse_data()
-            Button:
-                text: 'Plot Data'
+
             Button:
                 text: 'Export Data'
                 on_press: root.export_data()
+        BoxLayout:
+            size_hint: 0.1, 0.08
+            pos_hint: {"top":0.95, "center_x": 0.61}
+            Spinner:
+                text: 'Plot Data'
+                id: plot_spinner
+                on_text:
+                    root.plot_from_spinner(self.text)
 
         BoxLayout:
             id: boxlayout
@@ -40,6 +45,8 @@
             Button:
                 on_press: root.show_parameters()
             Button:
+                text: 'import mean orr'
+                on_press: root.import_mean_orr()
             Button:
             Button:
             Button:
