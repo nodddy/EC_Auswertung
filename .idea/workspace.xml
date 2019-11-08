@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="BookmarkManager">
-    <bookmark url="file://$PROJECT_DIR$/interface.py" line="441" />
+    <bookmark url="file://$PROJECT_DIR$/interface.py" line="431" />
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b490f7c5-6b47-4d50-a456-7ffc19b5f2ff" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CV_analysis.py" beforeDir="false" afterPath="$PROJECT_DIR$/CV_analysis.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/capa_auswertung.py" beforeDir="false" afterPath="$PROJECT_DIR$/capa_auswertung.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/20190919_3FeCo_E1_ORR_before_anodic.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/20190919_3FeCo_E1_ORR_before_cathodic.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/20190919_3FeCo_E1_ORR_before_corrected.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/20190919_3FeCo_E1_ORR_before_parameters_anodic.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/20190919_3FeCo_E1_ORR_before_parameters_cathodic.txt" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/config.ini" beforeDir="false" afterPath="$PROJECT_DIR$/config.ini" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/interface.kv" beforeDir="false" afterPath="$PROJECT_DIR$/interface.kv" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/interface.py" beforeDir="false" afterPath="$PROJECT_DIR$/interface.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/parameter summary.py" beforeDir="false" afterPath="$PROJECT_DIR$/parameter summary.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -23,14 +25,14 @@
     <favorites_list name="EC_Auswertung" />
   </component>
   <component name="FileEditorManager">
-    <splitter split-orientation="horizontal" split-proportion="0.64970416">
+    <splitter split-orientation="horizontal" split-proportion="0.6271488">
       <split-first>
         <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
           <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/interface.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="229">
-                  <caret line="228" column="56" lean-forward="true" selection-start-line="228" selection-start-column="56" selection-end-line="228" selection-end-column="56" />
+                <state relative-caret-position="300">
+                  <caret line="546" lean-forward="true" selection-start-line="546" selection-end-line="546" />
                   <folding>
                     <element signature="e#0#24#0" expanded="true" />
                   </folding>
@@ -41,8 +43,8 @@
           <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/interface.kv">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="600">
-                  <caret line="30" column="18" lean-forward="true" selection-start-line="30" selection-start-column="18" selection-end-line="30" selection-end-column="18" />
+                <state relative-caret-position="340">
+                  <caret line="40" column="18" lean-forward="true" selection-start-line="40" selection-start-column="18" selection-end-line="40" selection-end-column="18" />
                 </state>
               </provider>
             </entry>
@@ -50,7 +52,7 @@
           <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/parameter summary.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="836">
+                <state relative-caret-position="900">
                   <caret line="47" column="20" selection-start-line="47" selection-start-column="20" selection-end-line="47" selection-end-column="20" />
                   <folding>
                     <element signature="e#0#24#0" expanded="true" />
@@ -62,8 +64,8 @@
           <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/config.ini">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="60">
-                  <caret line="3" selection-start-line="3" selection-end-line="3" />
+                <state relative-caret-position="80">
+                  <caret line="4" column="12" selection-start-line="4" selection-start-column="12" selection-end-line="4" selection-end-column="12" />
                 </state>
               </provider>
             </entry>
@@ -72,7 +74,7 @@
             <entry file="file://$PROJECT_DIR$/capa_auswertung.py">
               <provider selected="true" editor-type-id="text-editor">
                 <state relative-caret-position="240">
-                  <caret line="17" column="19" lean-forward="true" selection-start-line="17" selection-start-column="19" selection-end-line="17" selection-end-column="19" />
+                  <caret line="17" column="19" selection-start-line="17" selection-start-column="19" selection-end-line="17" selection-end-column="19" />
                   <folding>
                     <element signature="e#0#19#0" expanded="true" />
                   </folding>
@@ -84,10 +86,10 @@
       </split-first>
       <split-second>
         <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-          <file pinned="false" current-in-tab="false">
+          <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/CV_formatting.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="340">
+                <state relative-caret-position="400">
                   <caret line="20" column="39" selection-start-line="20" selection-start-column="39" selection-end-line="20" selection-end-column="39" />
                   <folding>
                     <element signature="e#0#24#0" expanded="true" />
@@ -96,7 +98,7 @@
               </provider>
             </entry>
           </file>
-          <file pinned="false" current-in-tab="true">
+          <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/CV_analysis.py">
               <provider selected="true" editor-type-id="text-editor">
                 <state relative-caret-position="300">
@@ -168,11 +170,11 @@
         <option value="$PROJECT_DIR$/cx_setup.py" />
         <option value="$PROJECT_DIR$/setup.py" />
         <option value="$PROJECT_DIR$/linear.py" />
-        <option value="$PROJECT_DIR$/CV_formatting.py" />
-        <option value="$PROJECT_DIR$/config.ini" />
         <option value="$PROJECT_DIR$/parameter summary.py" />
         <option value="$PROJECT_DIR$/capa_auswertung.py" />
         <option value="$PROJECT_DIR$/CV_analysis.py" />
+        <option value="$PROJECT_DIR$/config.ini" />
+        <option value="$PROJECT_DIR$/CV_formatting.py" />
         <option value="$PROJECT_DIR$/interface.py" />
         <option value="$PROJECT_DIR$/interface.kv" />
       </list>
@@ -471,19 +473,29 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/config.ini">
+    <entry file="file://$PROJECT_DIR$/parameter summary.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="60">
-          <caret line="3" selection-start-line="3" selection-end-line="3" />
+        <state relative-caret-position="900">
+          <caret line="47" column="20" selection-start-line="47" selection-start-column="20" selection-end-line="47" selection-end-column="20" />
+          <folding>
+            <element signature="e#0#24#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/CV_formatting.py">
+    <entry file="file://$PROJECT_DIR$/config.ini">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="340">
-          <caret line="20" column="39" selection-start-line="20" selection-start-column="39" selection-end-line="20" selection-end-column="39" />
+        <state relative-caret-position="80">
+          <caret line="4" column="12" selection-start-line="4" selection-start-column="12" selection-end-line="4" selection-end-column="12" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/capa_auswertung.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="240">
+          <caret line="17" column="19" selection-start-line="17" selection-start-column="19" selection-end-line="17" selection-end-column="19" />
           <folding>
-            <element signature="e#0#24#0" expanded="true" />
+            <element signature="e#0#19#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -498,30 +510,23 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/capa_auswertung.py">
+    <entry file="file://$PROJECT_DIR$/CV_formatting.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="240">
-          <caret line="17" column="19" lean-forward="true" selection-start-line="17" selection-start-column="19" selection-end-line="17" selection-end-column="19" />
-          <folding>
-            <element signature="e#0#19#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/parameter summary.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="836">
-          <caret line="47" column="20" selection-start-line="47" selection-start-column="20" selection-end-line="47" selection-end-column="20" />
+        <state relative-caret-position="400">
+          <caret line="20" column="39" selection-start-line="20" selection-start-column="39" selection-end-line="20" selection-end-column="39" />
           <folding>
             <element signature="e#0#24#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/20190919_3FeCo_E1_ORR_before_cathodic.txt">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
     <entry file="file://$PROJECT_DIR$/interface.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="229">
-          <caret line="228" column="56" lean-forward="true" selection-start-line="228" selection-start-column="56" selection-end-line="228" selection-end-column="56" />
+        <state relative-caret-position="300">
+          <caret line="546" lean-forward="true" selection-start-line="546" selection-end-line="546" />
           <folding>
             <element signature="e#0#24#0" expanded="true" />
           </folding>
@@ -530,8 +535,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/interface.kv">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="600">
-          <caret line="30" column="18" lean-forward="true" selection-start-line="30" selection-start-column="18" selection-end-line="30" selection-end-column="18" />
+        <state relative-caret-position="340">
+          <caret line="40" column="18" lean-forward="true" selection-start-line="40" selection-start-column="18" selection-end-line="40" selection-end-column="18" />
         </state>
       </provider>
     </entry>

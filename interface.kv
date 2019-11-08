@@ -1,6 +1,16 @@
+#:import NoTransition kivy.uix.screenmanager.NoTransition
+
 
 <ScreenOne>:
     FloatLayout:
+
+        Label:
+            text: 'ORR analysis'
+            font_size: 65
+            color: 0,0,0,1
+            italic: True
+            size_hint: 0.2, 0.1
+            pos_hint: {'center_x':0.8, 'top': 0.98}
 
         BoxLayout:
             id: boxlayout
@@ -29,28 +39,32 @@
                 text: 'Export Data'
                 on_press: root.export_data()
         BoxLayout:
-            size_hint: 0.1, 0.08
-            pos_hint: {"top":0.95, "center_x": 0.61}
+            size_hint: 0.1, 0.05
+            pos_hint: {"top":0.195, "center_x": 0.35}
             Spinner:
                 text: 'Plot Data'
                 id: plot_spinner
                 on_text:
                     root.plot_from_spinner(self.text)
 
-        BoxLayout:
-            id: boxlayout
+        FloatLayout:
             orientation: 'vertical'
-            size_hint: 0.18, 0.7
-            pos_hint:{"top":1, "center_x":0.05}
+            size_hint: 0.04, 0.07
+            pos_hint:{"top":0.97, "center_x":0.04}
             Button:
-                on_press: root.show_parameters()
-            Button:
-                text: 'import mean orr'
-                on_press: root.import_mean_orr()
-            Button:
-            Button:
-            Button:
-            Button:
+                text: 'Navigation'
+                font_color: 0,0,0,0
+                background_normal: ''
+                on_press: app.open_navigation()
+                size_hint: 1, 1
+                pos_hint:{"top":1, "center_x":0.5}
+            Image:
+                source: 'navigation_button.png'
+                y: self.parent.y
+                x: self.parent.x
+                size: 75, 75
+                allow_stretch: True
+
         BoxLayout:
             orientation: 'vertical'
             id: plotter
@@ -142,6 +156,96 @@
                 size_hint: 1,0.1
                 halign: "center"
 
+<ScreenTwo>:
+    FloatLayout:
+        FloatLayout:
+            orientation: 'vertical'
+            size_hint: 0.04, 0.07
+            pos_hint:{"top":0.97, "center_x":0.04}
+            Button:
+                text: 'Navigation'
+                font_color: 0,0,0,0
+                background_normal: ''
+                on_press: app.open_navigation()
+                size_hint: 1, 1
+                pos_hint:{"top":1, "center_x":0.5}
+            Image:
+                source: 'navigation_button.png'
+                y: self.parent.y
+                x: self.parent.x
+                size: 75, 75
+                allow_stretch: True
+        Label:
+            text: 'CV analysis'
+            font_size: 65
+            color: 0,0,0,1
+            italic: True
+            size_hint: 0.2, 0.1
+            pos_hint: {'center_x':0.8, 'top': 0.98}
+
+
+<ScreenThree>:
+    FloatLayout:
+        FloatLayout:
+            orientation: 'vertical'
+            size_hint: 0.04, 0.07
+            pos_hint:{"top":0.97, "center_x":0.04}
+            Button:
+                text: 'Navigation'
+                font_color: 0,0,0,0
+                background_normal: ''
+                on_press: app.open_navigation()
+                size_hint: 1, 1
+                pos_hint:{"top":1, "center_x":0.5}
+            Image:
+                source: 'navigation_button.png'
+                y: self.parent.y
+                x: self.parent.x
+                size: 75, 75
+                allow_stretch: True
+        Label:
+            text: 'Capacitance analysis'
+            font_size: 65
+            color: 0,0,0,1
+            italic: True
+            size_hint: 0.2, 0.1
+            pos_hint: {'center_x':0.8, 'top': 0.98}
+
+
+<Navigation>: #popup class
+    size_hint: 0.18, 0.5
+    pos_hint: {"right": 0.188, "top": 0.972}
+    title: 'Navigation'
+    background: ''
+    title_color:0,0,0,1
+    title_size: 22
+
+    BoxLayout:
+        size_hint: 0.6, 0.9
+        pos_hint: {"center_x": 0.5, "top": 0.95}
+        spacing: 10
+        orientation: 'vertical'
+        Button:
+            font_size: 20
+            text: 'ORR analysis'
+            on_press: root.dismiss()
+            on_press: root.manager.current= 'screen1'
+        Button:
+            font_size: 20
+            text: 'CV analysis'
+            on_press: root.dismiss()
+            on_press: root.manager.current= 'screen2'
+        Button:
+            font_size: 20
+            text: 'Capacitance Analysis'
+            on_press: root.dismiss()
+            on_press: root.manager.current= 'screen3'
+        Button:
+            font_size: 20
+            text: 'Placeholder'
+        Button:
+            font_size: 20
+            text: 'Placeholder'
 
 
 
@@ -199,8 +303,11 @@
 <Manager>:
     id: screen_manager
 
+    transition: NoTransition()
+
     screen_one: screen_one
     screen_two: screen_two
+    screen_three: screen_three
 
     ScreenOne:
         id: screen_one
@@ -210,4 +317,9 @@
     ScreenTwo:
         id: screen_two
         name: 'screen2'
+        manager: screen_manager
+
+    ScreenThree:
+        id: screen_three
+        name: 'screen3'
         manager: screen_manager

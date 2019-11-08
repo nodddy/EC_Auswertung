@@ -201,9 +201,10 @@ class Plotter:
                                   'title': 'ORR analysis',
                                   'clear_fig': True,
                                   'parameters': True},
-                 'Tafel plot': {'data': [{'x': '', 'y': ''}],
-                                'x_label': '',
-                                'y_label': '',
+                 'Tafel plot': {'data': [{'x': "data.parameters[2]['tafel']['Pot']",
+                                          'y': "data.parameters[2]['tafel']['Tafel']"}],
+                                'y_label': 'log(jkin)',
+                                'x_label': 'Potential vs. RHE [V]',
                                 'title': 'Tafel plot',
                                 'clear_fig': True}}
 
@@ -263,6 +264,7 @@ class ScreenOne(Screen):
 
     def add_plot_button(self, btn_text):
         self.ids['plot_spinner'].values.append(btn_text)
+        self.ids['plot_spinner'].values = list(dict.fromkeys(self.ids['plot_spinner'].values))
 
     @staticmethod
     def plot_from_spinner(value):
@@ -270,9 +272,6 @@ class ScreenOne(Screen):
 
     def clear_plot_spinner(self):
         self.ids['plot_spinner'].values = []
-
-    def import_mean_orr(self):
-        pass
 
     def clear_plot(self):
         plt.cla()
@@ -340,9 +339,6 @@ class ScreenOne(Screen):
     def do_correct_data(self, corr_dict):
         return self.correct_data(corr_dict)
 
-    # RHE correction
-    # IR correction
-    # Background correction
     def correct_data(self, corr_dict):
 
         def correct_background(data, background_data):
@@ -392,17 +388,11 @@ class ScreenOne(Screen):
 
         data.set_anodic(anodic_scan)
         data.set_cathodic(cathodic_scan)
-        # plotter.plot_corr_orr()
         self.add_plot_button('ORR corrected')
         plotter.plot('ORR corrected')
         return
 
-    # get half-wave potential,
-    # current at certain potentials,
-    # onset point,
-    # Koutecky-Levich analysis and get j lim and j kin
-    # Tafel plot analysis and get parameters
-    def analyse_data(self, onset_threshold=5, jlim_threshold=0.0002):
+    def analyse_data(self):
         if data.orr is None:
             print('No ORR data found')
             return
@@ -447,33 +437,37 @@ class ScreenOne(Screen):
                 current = current_df['Disk'].mean()
                 return current
 
-            j = find_fixed_potential(input_data, 0.75)
+            j = find_fixed_potential(input_data, float(Config.glob('J_KIN_POTENTIAL')))
             j_lim = find_jlim(input_data)
             return (j * j_lim) / (j_lim - j)
 
         def find_Tafel(input):
             j_lim = -abs(input['Disk']).max()
-            dat = input.query('0.4 < Pot', inplace=False)
-            dat['Tafel'] = (dat['Disk'] * j_lim) / (j_lim - dat['Disk']) * (-1)
-            dat['Tafel'] = np.log10(dat['Tafel'])
-            dat = dat.iloc[::20, :]
-            return dat
+            df = pd.DataFrame()
+            df['Pot'] = input['Pot']
+            df['Disk'] = input['Disk']
+            df.query('0.4 < Pot', inplace=True)
+            df['Tafel'] = (df['Disk'] * j_lim) / (j_lim - df['Disk']) * (-1)
+            df['Tafel'] = np.log10(df['Tafel'])
+            out_df = df.iloc[::20, :]
+            return out_df
 
         def find_n(input_data, N):
             df = input_data.query('0.1 < Pot < 0.7', inplace=False).copy(deep=True)
             df['n'] = (4 * df['Disk']) / (df['Disk'] + (df['Ring'] / N))
             return df['n'].mean()
 
-        # 'tafel': find_Tafel(scan)
         for scan in [reduced_anodic, reduced_cathodic]:
             parameters.append({'halfwave_pot': find_inflectionpoint(scan),
                                'onset': find_onset(scan),
-                               'peroxide_yield': find_peroxide_yield(scan, 0.37),
-                               'n': find_n(scan, 0.37),
-                               'activity': find_activity(scan)})
+                               'peroxide_yield': find_peroxide_yield(scan, float(Config.glob('RRDE_N'))),
+                               'n': find_n(scan, float(Config.glob('RRDE_N'))),
+                               'activity': find_activity(scan),
+                               'tafel': find_Tafel(scan)})
         data.set_parameters(parameters)
         self.show_parameters()
         self.add_plot_button('ORR analysis')
+        self.add_plot_button('Tafel plot')
         plotter.plot('ORR analysis')
         return
 
@@ -487,9 +481,10 @@ class ScreenOne(Screen):
         params = data.parameters
         for i in range(1, 3):
             for key in params[i]:
-                val = params[i][key].round(3)
-                lbl = Label(text=str(val), color=(0, 0, 0, 1))
-                root.children[i].add_widget(lbl)
+                if key is not 'tafel':
+                    val = params[i][key].round(3)
+                    lbl = Label(text=str(val), color=(0, 0, 0, 1))
+                    root.children[i].add_widget(lbl)
 
     # Export corrected data and summary to txt and csv
     # Export all plots to png
@@ -517,6 +512,8 @@ class ScreenOne(Screen):
             return
 
         dir = Path(tkfilebrowser.askopendirname(initialdir=data.folder))
+        if dir == Path('.'):
+            return
         corr_orr_file_name = data.orr['file_name'] + '_corrected.txt'
         anodic_file_name = data.orr['file_name'] + '_anodic.txt'
         cathodic_file_name = data.orr['file_name'] + '_cathodic.txt'
@@ -548,6 +545,9 @@ class ScreenOne(Screen):
 class ScreenTwo(Screen):
     pass
 
+class ScreenThree(Screen):
+    pass
+
 
 class RV(RecycleView):
     def __init__(self, orr_data, orr_bckg_data, eis_data, **kwargs):
@@ -564,6 +564,13 @@ class RV(RecycleView):
 
     def on_update(self):
         return self.parent.remove_widget(self)
+
+
+class Navigation(Popup):
+    def __init__(self, screen_manager, **kwargs):
+        super(Navigation, self).__init__(**kwargs)
+        self.manager = screen_manager
+        return
 
 
 class DataCorrection(Popup):
@@ -632,6 +639,11 @@ class InterfaceApp(App):
         global manager
         manager = Manager()
         return manager
+
+    @staticmethod
+    def open_navigation():
+        navigation = Navigation(manager)
+        return navigation.open()
 
 
 if __name__ == '__main__':
