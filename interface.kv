@@ -29,14 +29,14 @@
                 id: import_eis
                 on_press: root.import_eis()
             Button:
-                text: 'Correct data'
+                text: 'Data Correction'
                 on_press: root.open_correction_popup()
             Button:
-                text: 'Analyse Data'
+                text: 'Analysis'
                 on_press: root.analyse_data()
 
             Button:
-                text: 'Export Data'
+                text: 'Data Export '
                 on_press: root.export_data()
         BoxLayout:
             size_hint: 0.1, 0.05
@@ -158,6 +158,22 @@
 
 <ScreenTwo>:
     FloatLayout:
+        BoxLayout:
+            id: boxlayout
+            size_hint: 0.3, 0.08
+            pos_hint:{"top":0.95, "center_x":0.3}
+            Button:
+                text: 'Import CV'
+                id: import_cv
+                on_press: root.import_cv()
+            Button:
+                text: 'iR correction'
+                on_press: root.ir_correction()
+            Button:
+                text: 'Analysis'
+                on_press: root.analyse()
+            Button:
+                text: 'Export Data'
         FloatLayout:
             orientation: 'vertical'
             size_hint: 0.04, 0.07
@@ -182,6 +198,65 @@
             italic: True
             size_hint: 0.2, 0.1
             pos_hint: {'center_x':0.8, 'top': 0.98}
+
+        BoxLayout:
+            orientation: 'vertical'
+            id: plotter
+            size_hint: 0.4, 0.65
+            pos_hint: {"top": 0.85, "center_x": 0.75}
+            canvas.before:
+                Color:
+                    rgba: .5, .5, .5, 1
+                Line:
+                    width: 1
+                    rectangle: self.x, self.y, self.width, self.height
+        BoxLayout:
+            size_hint: 0.102, 0.05
+            pos_hint: {"top": 0.195, "center_x": 0.9}
+            Button:
+                text: 'save as png'
+                on_press: root.safe_plot_to_png()
+        BoxLayout:
+            size_hint: 0.102, 0.05
+            pos_hint: {"top": 0.195, "center_x": 0.6}
+            Button:
+                text: 'clear plot'
+                on_press: root.clear_plot()
+        BoxLayout:
+            orientation: 'horizontal'
+            id: parameters
+            size_hint: 0.26, 0.2
+            pos_hint: {"top": 0.6, "center_x": 2.82}
+            canvas.before:
+                Color:
+                    rgba: .5, .5, .5, 1
+                Line:
+                    width: 1
+                    rectangle: self.x, self.y, self.width, self.height
+            BoxLayout:
+                orientation: 'vertical'
+                id: cathodic
+                Label:
+                    color: 0,0,0,1
+                    text: 'cathodic'
+                    bold: True
+            BoxLayout:
+                orientation: 'vertical'
+                id: anodic
+                Label:
+                    color: 0,0,0,1
+                    text: 'anodic'
+                    bold: True
+            BoxLayout:
+                orientation: 'vertical'
+                id: parameter
+                Label:
+                    color: 0,0,0,1
+                    text: 'Parameter'
+                    bold: True
+                Label:
+                    color: 0,0,0,1
+                    text: 'EASA [m2/g_Pt]'
 
 
 <ScreenThree>:

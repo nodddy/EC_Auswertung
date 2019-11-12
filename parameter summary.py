@@ -37,7 +37,7 @@ def import_data(dir):
 
 def analyse_data(data, parameters):
     loss_dict = {}
-
+    print(data)
     for date in data.keys():
         loss_dict[date] = {}
         for mode in ['anodic', 'cathodic']:
@@ -53,6 +53,7 @@ def analyse_data(data, parameters):
                 loss_dict[date][mode][str(param)] = loss
                 loss_dict[date][mode][str(param) + '_value_before'] = value_before
                 loss_dict[date][mode][str(param) + '_value_after'] = value_after
+
     return loss_dict
 
 
