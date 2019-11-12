@@ -485,7 +485,7 @@ class ScreenOne(Screen):
 
     def __init__(self, **kwargs):
         super(ScreenOne, self).__init__(**kwargs)
-        Window.clearcolor = (1, 1, 1, 1)
+        Window.clearcolor = (0.5, 0.5, 0.5, 1)
         Window.borderless = False
         self.active_RV = None
 
@@ -595,12 +595,12 @@ class ScreenOne(Screen):
             for key in params[i]:
                 if key is not 'tafel':
                     val = params[i][key].round(3)
-                    lbl = Label(text=str(val), color=(0, 0, 0, 1))
+                    lbl = Label(text=str(val), color=(0, 0, 0, 1), font_size= 20)
                     root.children[i].add_widget(lbl)
 
     # Export corrected data and summary to txt and csv
     # Export all plots to png
-    def export_data(self):
+    def export_data(self, data_to_export='orr'):
 
         def write_to_file(dict, file_path):
             with open(file_path, 'w') as file:
