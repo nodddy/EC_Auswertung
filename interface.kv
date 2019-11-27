@@ -13,6 +13,13 @@
             pos_hint: {'center_x':0.8, 'top': 0.98}
 
         BoxLayout:
+            size_hint: 0.1,0.1
+            pos_hint: {'top':0.9 , 'center_x': 0.7}
+            Button:
+                text: 'Analyse all'
+                on_press: root.analyse_all_files()
+
+        BoxLayout:
             id: boxlayout
             size_hint: 0.45, 0.1
             pos_hint:{"top":0.97, "center_x":0.35}
@@ -59,7 +66,7 @@
 
         BoxLayout:
             size_hint: 0.1, 0.05
-            pos_hint: {"top":0.195, "center_x": 0.5}
+            pos_hint: {"top":0.195, "center_x": 0.4}
             Spinner:
                 text: 'Plot Data'
                 id: plot_spinner
@@ -171,6 +178,10 @@
                 Label:
                     color: 0,0,0,1
                     text: 'Activity  [mA/cm2]'
+                    font_size: 20
+                Label:
+                    color: 0,0,0,1
+                    text: 'Tafel slope  [mV/dec]'
                     font_size: 20
 
         BoxLayout:

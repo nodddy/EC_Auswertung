@@ -8,6 +8,7 @@ from kivy.uix.dropdown import DropDown
 from kivy.garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg
 from kivy.uix.popup import Popup
 from kivy.uix.recycleview import RecycleView
+from sklearn.linear_model import LinearRegression
 
 import tkfilebrowser
 import pandas as pd
@@ -114,11 +115,14 @@ class Data:
         return smoothed.iloc[::5].copy(deep=True).dropna()
 
     # data_descriptor is the object of the data stored in this class (data.orr, data.orr_bckg, data.eis)
-    def import_data(self, data_descriptor):
+    def import_data(self, data_descriptor, file_path=None):
 
-        def import_from_path(row_skip=0):
-            path = tkfilebrowser.askopenfilename(
-                initialdir='N:/BZ_Neu/23_char_hp/5_Ergebnisse/MGo/Masterarbeit/Daten/RDE')
+        def import_from_path(row_skip=0, file_path=None):
+            if file_path is None:
+                path = tkfilebrowser.askopenfilename(
+                    initialdir='N:/BZ_Neu/23_char_hp/5_Ergebnisse/MGo/Masterarbeit/Daten/RDE')
+            else:
+                path = file_path
             file = pd.read_csv(path, sep='\t', skiprows=row_skip)
             data.set_folder(Path(path))
             return file, path
@@ -181,9 +185,9 @@ class Data:
             return formatted_data
 
         if data_descriptor == 'cv':
-            raw_data, path = import_from_path(row_skip=1)
+            raw_data, path = import_from_path(row_skip=1, file_path=file_path)
         else:
-            raw_data, path = import_from_path()
+            raw_data, path = import_from_path(file_path=file_path)
         file_name = file_name_from_path(path)
         if data_descriptor not in file_name.lower():
             raise FileNotFoundError
@@ -347,20 +351,24 @@ class Analysis:
             j_lim = find_jlim(input_data)
             return (j * j_lim) / (j_lim - j)
 
-        def find_Tafel(input):
+        def find_tafel(input, onset, halfwave):
             j_lim = -abs(input['Disk']).max()
             df = pd.DataFrame()
             df['Pot'] = input['Pot']
             df['Disk'] = input['Disk']
-            df.query('0.4 < Pot', inplace=True)
-            df['Tafel'] = (df['Disk'] * j_lim) / (j_lim - df['Disk']) * (-1)
+            df.query('0.4 < Pot < @onset+0.05', inplace=True)
+            df['Tafel'] = ((df['Disk'] * j_lim) / (j_lim - df['Disk']) * (-1))
             df['Tafel'] = np.log10(df['Tafel'])
-            out_df = df.iloc[::20, :]
-            return out_df
+            out_df = df
+            lin_area = df.query('@onset > Pot > (@halfwave+@onset)/2', inplace=False).dropna()
+            y = np.asarray(lin_area['Pot']).astype(np.float64)
+            x = np.asarray(lin_area['Tafel']).astype(np.float64).reshape(-1, 1)
+            model = LinearRegression().fit(x, y)
+            return {'slope': model.coef_[0] * 1000, 'intercept': model.intercept_, 'data': out_df}
 
         def find_n(input_data, N):
             df = input_data.query('0.1 < Pot < 0.7', inplace=False).copy(deep=True)
-            df['n'] = (4 * df['Disk']) / (df['Disk'] + (df['Ring'] / N))
+            df['n'] = (4 * df['Disk'].abs()) / (df['Disk'].abs() + (df['Ring'] / N))
             return df['n'].mean()
 
         for scan in [reduced_anodic, reduced_cathodic]:
@@ -369,7 +377,7 @@ class Analysis:
                                'peroxide_yield': find_peroxide_yield(scan, float(Config.glob('RRDE_N'))),
                                'n': find_n(scan, float(Config.glob('RRDE_N'))),
                                'activity': find_activity(scan),
-                               'tafel': find_Tafel(scan)})
+                               'tafel': find_tafel(scan, find_onset(scan), find_inflectionpoint(scan))})
         self.orr = parameters
         return
 
@@ -413,10 +421,13 @@ class Plotter:
                                   'title': 'ORR analysis',
                                   'clear_fig': True,
                                   'parameters': True},
-                 'Tafel plot': {'data': [{'x': "analysis.orr[2]['tafel']['Pot']",
-                                          'y': "analysis.orr[2]['tafel']['Tafel']"}],
-                                'y_label': 'log(jkin)',
-                                'x_label': 'Potential vs. RHE [V]',
+                 'Tafel plot': {'data': [{'y': "analysis.orr[2]['tafel']['data']['Pot']",
+                                          'x': "analysis.orr[2]['tafel']['data']['Tafel']"},
+                                         {
+                                             'y': "analysis.orr[2]['tafel']['data']['Tafel']*(analysis.orr[2]['tafel']['slope']/1000)+analysis.orr[2]['tafel']['intercept']",
+                                             'x': "analysis.orr[2]['tafel']['data']['Tafel']"}],
+                                'x_label': 'log(jkin)',
+                                'y_label': 'Potential vs. RHE [V]',
                                 'title': 'Tafel plot',
                                 'clear_fig': True},
                  'raw CV': {'data': [{'x': 'data.cv["formatted"]["Pot"]',
@@ -488,6 +499,43 @@ class ScreenOne(Screen):
         Window.clearcolor = (0.5, 0.5, 0.5, 1)
         Window.borderless = False
         self.active_RV = None
+
+    def analyse_all_files(self):
+        data_dict = {}
+
+        dir = Path('N:/BZ_Neu/23_char_hp/5_Ergebnisse/MGo/Masterarbeit/Daten/RDE')
+        for folder in os.listdir(str(dir)):
+            if os.path.isfile(dir / folder) is True:
+                continue
+            try:
+                int(folder.split('_')[0])
+            except ValueError:
+                continue
+            data_dict[str(folder)] = {'before': {}, 'after': {}}
+
+            for file in os.listdir(str(dir / folder)):
+                if os.path.isfile(dir / folder / file) is True:
+                    stage = file.split('_')[-1].split('.')[0].lower()
+
+                    if stage != 'before' and stage != 'after':
+                        continue
+                    tech = file.split('_')[-2].lower()
+                    if tech != 'bckg' and tech != 'orr' and tech != 'eis':
+                        continue
+                    if tech == 'bckg':
+                        tech = 'orr_' + tech
+                    data_dict[str(folder)][stage][tech] = Path(dir / folder / file)
+
+        for date in data_dict.keys():
+            for stage in data_dict[date].keys():
+                for key, file_path in data_dict[date][stage].items():
+                    eval('data.set_' + key + '(data.import_data(data_descriptor=str(key), file_path=str(file_path)))')
+                data.correction(corr_dict={'electrode_corr': False,
+                                           'background_corr': True,
+                                           'eis_corr': True})
+                analysis.analyse_orr()
+                self.export_data(export_path=str(Path(dir / date / 'analysis')))
+        print('done')
 
     def add_plot_button(self, btn_text):
         self.ids['plot_spinner'].values.append(btn_text)
@@ -595,12 +643,16 @@ class ScreenOne(Screen):
             for key in params[i]:
                 if key is not 'tafel':
                     val = params[i][key].round(3)
-                    lbl = Label(text=str(val), color=(0, 0, 0, 1), font_size= 20)
+                    lbl = Label(text=str(val), color=(0, 0, 0, 1), font_size=20)
+                    root.children[i].add_widget(lbl)
+                else:
+                    val = params[i][key]['slope'].round(3)
+                    lbl = Label(text=str(val), color=(0, 0, 0, 1), font_size=20)
                     root.children[i].add_widget(lbl)
 
     # Export corrected data and summary to txt and csv
     # Export all plots to png
-    def export_data(self, data_to_export='orr'):
+    def export_data(self, data_to_export='orr', export_path=None):
 
         def write_to_file(dict, file_path):
             with open(file_path, 'w') as file:
@@ -609,6 +661,8 @@ class ScreenOne(Screen):
         def csv_from_dict(dict):
             csv = ''
             for k, v in dict.items():
+                if k == 'data':
+                    continue
                 if isinstance(v, type(dict)):
                     line = k + '\n' + csv_from_dict(v)
                     csv += line
@@ -622,8 +676,10 @@ class ScreenOne(Screen):
 
         if data.orr is None:
             return
-
-        dir = Path(tkfilebrowser.askopendirname(initialdir=data.folder))
+        if export_path is None:
+            dir = Path(tkfilebrowser.askopendirname(initialdir=data.folder))
+        else:
+            dir = export_path
         if dir == Path('.'):
             return
         corr_orr_file_name = data.orr['file_name'] + '_corrected.txt'
@@ -631,25 +687,36 @@ class ScreenOne(Screen):
         cathodic_file_name = data.orr['file_name'] + '_cathodic.txt'
         parameters_ano_file_name = data.orr['file_name'] + '_parameters_anodic.txt'
         parameters_cat_file_name = data.orr['file_name'] + '_parameters_cathodic.txt'
+        tafel_ano_file_name = data.orr['file_name'] + '_tafel_plot_anodic.txt'
+        tafel_cat_file_name = data.orr['file_name'] + '_tafel_plot_cathodic.txt'
 
-        orr_header_dict = {'Pot': 'Potential [V]',
-                           'Disk': 'Disk Current density[mA/cm2]',
-                           'Ring': 'Ring Current density[mA/cm2]'}
+        orr_header_dict = {'Pot': 'Potential vs. RHE [V]',
+                           'Disk': 'Disk Current Density[mA/cm2]',
+                           'Ring': 'Ring Current Density[mA/cm2]',
+                           'Tafel': 'log(Current Density) '}
 
-        for item in [data.anodic, data.cathodic, data.orr['corrected']]:
+        for item in [data.anodic,
+                     data.cathodic,
+                     data.orr['corrected'],
+                     analysis.orr[1]['tafel']['data'],
+                     analysis.orr[2]['tafel']['data']]:
             try:
                 rename_header(item, orr_header_dict)
             except AttributeError:
                 pass
         try:
-            data.orr['corrected'].to_csv(dir / corr_orr_file_name, sep='\t', index=False, header=True)
+            data.orr['corrected'].to_csv(Path(dir) / Path(corr_orr_file_name), sep='\t', index=False, header=True)
         except AttributeError:
             pass
-        data.anodic.to_csv(dir / anodic_file_name, sep='\t', index=False, header=True)
-        data.cathodic.to_csv(dir / cathodic_file_name, sep='\t', index=False, header=True)
+        data.anodic.to_csv(Path(dir) / Path(anodic_file_name), sep='\t', index=False, header=True)
+        data.cathodic.to_csv(Path(dir) / Path(cathodic_file_name), sep='\t', index=False, header=True)
+        analysis.orr[1]['tafel']['data'].to_csv(Path(dir) / Path(tafel_ano_file_name), sep='\t', index=False,
+                                                header=True)
+        analysis.orr[2]['tafel']['data'].to_csv(Path(dir) / Path(tafel_cat_file_name), sep='\t', index=False,
+                                                header=True)
         try:
-            write_to_file(analysis.orr[1], dir / parameters_ano_file_name)
-            write_to_file(analysis.orr[2], dir / parameters_cat_file_name)
+            write_to_file(analysis.orr[1], Path(dir) / Path(parameters_ano_file_name))
+            write_to_file(analysis.orr[2], Path(dir) / Path(parameters_cat_file_name))
         except TypeError:
             return
 
