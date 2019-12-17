@@ -67,4 +67,4 @@ def export_summary(data_dict):
 
 
 data = import_data(dir)
-export_summary(analyse_data(data, ['peroxide_yield', 'activity', 'halfwave_pot', 'onset', 'n']))
+export_summary(analyse_data(data, ['peroxide_yield', 'activity', 'halfwave_pot', 'onset', 'n', 'slope']))

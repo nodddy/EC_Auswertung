@@ -21,9 +21,9 @@ class Data:
     def set_data(self, data_dict):
         self.data = data_dict
 
-    def import_new_data(self):
-        def import_file(path):
-            df = pd.read_csv(path, sep='\t')
+    def import_new_data(self, path):
+        def import_file(file_path):
+            df = pd.read_csv(file_path, sep='\t')
             return df
 
         def format_data(df):
@@ -44,12 +44,12 @@ class Data:
             key_list = [0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14]
             return dict(zip(key_list, split_df_list))
 
-        path = Path('N:/BZ_Neu/23_char_hp/5_Ergebnisse/MGo/Masterarbeit/Daten/RDE/FeCo (11)/20191017_FeCo_E1')
-        file_name = '20191017_FeCo_E1_capa_hin_before.txt'
+        for file in os.listdir(path):
+            if 'hin' in file and 'before' in file:
+                return self.set_data(format_data(import_file(path / file)))
+        return self.set_data(None)
 
-        return self.set_data(format_data(import_file(path / file_name)))
-
-    def import_data(self, kw='before'):
+    def import_data(self, path):
         def import_file(path):
             df = pd.read_csv(path, sep='\t')
             return df
@@ -64,12 +64,11 @@ class Data:
 
             return scan_rate, df
 
-        folder_path = Path('N:/BZ_Neu/23_char_hp/5_Ergebnisse/MGo/Masterarbeit/Daten/RDE/20190910_3FeCo-N-C_E1/capa')
         data_dict = {}
 
-        for file in os.listdir(folder_path):
-            if 'hin' in file and kw in file:
-                raw_import = import_file(folder_path / file)
+        for file in os.listdir(path / 'capa'):
+            if 'hin' in file and 'after' in file:
+                raw_import = import_file(path / file)
                 scan_rate, formatted_data = format_data(raw_import)
                 data_dict[str(scan_rate)] = formatted_data
 
@@ -82,6 +81,9 @@ class Auswertung:
     def get_currents(self):
         """ gets current values at fixed potential from class (analysis_potential) """
 
+        if data.data is None:
+            return None
+
         values = []
         for scan_rate in data.data.keys():
             current = data.data[scan_rate].iloc[
@@ -93,11 +95,13 @@ class Auswertung:
     def linear_regr(self, value_lst):
         """ applies linear reggression to x and y values of tuple list and return slope value """
 
+        if value_lst is None:
+            return None
         x_lst = [tpl[0] for tpl in value_lst]
         y_lst = [tpl[1] for tpl in value_lst]
         model = LinearRegression().fit(np.asarray(x_lst).astype(np.float64).reshape(-1, 1),
                                        np.asarray(y_lst).astype(np.float64))
-        return model.coef_[0]
+        return model.coef_[0]/0.2472, model.intercept_/0.2472
 
 
 class Plotter:
@@ -113,10 +117,40 @@ data = Data()
 auswertung = Auswertung()
 plotter = Plotter()
 
-data.import_new_data()
-#data_before = data.import_data()
-#data.set_data(data_before)
-val = auswertung.get_currents()
-result = auswertung.linear_regr(val)
-print((result * 1000) / 0.2472)
-plotter.plot()
+
+def analyse_capacity(path):
+    if os.path.isdir(path) is True:
+        data.import_new_data(path)
+        val = auswertung.get_currents()
+        try:
+            slope, intercept = auswertung.linear_regr(val)
+        except TypeError:
+            slope, intercept = None, None
+        return str(path).split('20')[-1], slope, intercept
+    else:
+        return None,None,None
+
+def csv_from_dict(dict):
+    csv = ''
+    for k, v in dict.items():
+        if k == 'data':
+            continue
+        if isinstance(v, type(dict)):
+            line = k + '\n' + csv_from_dict(v)
+            csv += line
+            continue
+        line = str(k) + '\t' + str(v) + '\n'
+        csv += line
+    return csv
+
+dir = Path('N:/BZ_Neu/23_char_hp/5_Ergebnisse/MGo/Masterarbeit/Daten/RDE')
+dicti = {}
+for folder in os.listdir(dir):
+    key, val1, val2 = analyse_capacity(dir / folder)
+    if val1 is not None:
+        dicti[key] = f'{val1}\t{val2}'
+
+with open(dir/'capa_analysis.txt', 'w') as file:
+    file.write(f'Parameter \t Value \n{csv_from_dict(dicti)}')
+
+

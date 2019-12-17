@@ -273,10 +273,10 @@ class Analysis:
                 return integrate.trapz(curve_y, curve_x)
 
             def find_curve_section(cv_data, lower_pot, upper_pot):
-                min_point = cv_data.query('@lower_pot < Pot < @upper_pot', inplace=False).abs()
+                min_point = cv_data.query(f'{lower_pot} < Pot < {upper_pot}', inplace=False).abs()
                 min_point_curr = min_point['Disk'].min()
-                min_point_pot = min_point.query('Disk == @min_point_curr')['Pot'].iloc[0]
-                return cv_data.abs().query(' Pot <= @min_point_pot and Disk >= @min_point_curr',
+                min_point_pot = min_point.query(f'Disk == {min_point_curr}')['Pot'].iloc[0]
+                return cv_data.abs().query(f' Pot <= {min_point_pot} and Disk >= {min_point_curr}',
                                            inplace=False)
 
             ecsa_curve = find_curve_section(cv_data, pot_dict[technique][0], pot_dict[technique][1])
@@ -320,7 +320,7 @@ class Analysis:
 
         def find_inflectionpoint(input_data):
             diff_max = input_data['Diff1'].max()
-            inflection_point = input_data.query('Diff1 == @diff_max', inplace=False)
+            inflection_point = input_data.query(f'Diff1 == {diff_max}', inplace=False)
             return inflection_point['Pot'].iloc[0]
 
         def find_onset(input_data):
@@ -333,7 +333,7 @@ class Analysis:
             return onset['Pot'].iloc[0]
 
         def find_peroxide_yield(input_data, N):
-            data = input_data.query('0.1 < Pot < 0.7', inplace=False).copy(deep=True)
+            data = input_data.query('0.1 < Pot < 0.75', inplace=False).copy(deep=True)
             data['PeroxideYield'] = ((2 * (abs(data['Ring'] / N))) / (
                     abs(data['Disk']) + (abs(data['Ring']) / N))) * 100
             return data['PeroxideYield'].mean()
@@ -352,22 +352,51 @@ class Analysis:
             return (j * j_lim) / (j_lim - j)
 
         def find_tafel(input, onset, halfwave):
+            def search_linear(df):
+                def lin_reggr(x_lst, y_lst):
+                    x = np.asarray(x_lst).astype(np.float64).reshape(-1, 1)
+                    y = np.asarray(y_lst).astype(np.float64)
+                    model = LinearRegression().fit(x, y)
+                    return model.score(x, y), model.coef_[0], model.intercept_
+
+                def slice_df(df, window=10):
+                    df.dropna(inplace=True)
+                    df.reset_index(inplace=True)
+                    current_index = df.first_valid_index()
+                    slice_list = []
+                    while current_index < len(df):
+                        slice_list.append(df.iloc[current_index:current_index + window])
+                        current_index += window
+                    return slice_list
+
+                lin_df = None
+                for slice in slice_df(df):
+                    if lin_df is None:
+                        lin_df = slice
+                        r_sqr, slope, intercept = lin_reggr(lin_df['Tafel'], lin_df['Pot'])
+                    else:
+                        slice_r_sqr, slice_slope, slice_intercept = lin_reggr(slice['Tafel'], slice['Pot'])
+                        if slice_slope * 0.5 < slope < slice_slope * 1.5:
+                            lin_df = pd.concat(lin_df, slice)
+                            r_sqr, slope, intercept = lin_reggr(lin_df['Tafel'], lin_df['Pot'])
+                        else:
+                            return r_sqr, slope, intercept
+
+                        return r_sqr, slope, intercept
+
             j_lim = -abs(input['Disk']).max()
             df = pd.DataFrame()
             df['Pot'] = input['Pot']
             df['Disk'] = input['Disk']
-            df.query('0.4 < Pot < @onset+0.05', inplace=True)
+            df.query('0.45 < Pot ', inplace=True)
             df['Tafel'] = ((df['Disk'] * j_lim) / (j_lim - df['Disk']) * (-1))
             df['Tafel'] = np.log10(df['Tafel'])
             out_df = df
-            lin_area = df.query('@onset > Pot > (@halfwave+@onset)/2', inplace=False).dropna()
-            y = np.asarray(lin_area['Pot']).astype(np.float64)
-            x = np.asarray(lin_area['Tafel']).astype(np.float64).reshape(-1, 1)
-            model = LinearRegression().fit(x, y)
-            return {'slope': model.coef_[0] * 1000, 'intercept': model.intercept_, 'data': out_df}
+            r_sqr, slope, intercept = search_linear(df)
+            return {'slope': slope * 1000, 'intercept': intercept, 'data': out_df[::-1]}
 
         def find_n(input_data, N):
-            df = input_data.query('0.1 < Pot < 0.7', inplace=False).copy(deep=True)
+            df = input_data.query('0.1 < Pot < 0.75', inplace=False).copy(deep=True)
             df['n'] = (4 * df['Disk'].abs()) / (df['Disk'].abs() + (df['Ring'] / N))
             return df['n'].mean()
 
@@ -429,7 +458,8 @@ class Plotter:
                                 'x_label': 'log(jkin)',
                                 'y_label': 'Potential vs. RHE [V]',
                                 'title': 'Tafel plot',
-                                'clear_fig': True},
+                                'clear_fig': True,
+                                'axis': '{"xmin":-2, "xmax":2.0, "ymin":0.3, "ymax":1.0}'},
                  'raw CV': {'data': [{'x': 'data.cv["formatted"]["Pot"]',
                                       'y': "data.cv['formatted']['Disk']"}],
                             'y_label': 'Current Density [mA/cm2]',
@@ -469,6 +499,8 @@ class Plotter:
             plt.plot(eval(dataset['x']), eval(dataset['y']))
         if 'parameters' in self.plot_dict[plot_name].keys():
             self.plot_parameters()
+        if 'axis' in self.plot_dict[plot_name].keys():
+            plt.axis(**eval(self.plot_dict[plot_name]['axis']))
         if 'zero_line' in self.plot_dict[plot_name].keys():
             x_data = eval(self.plot_dict[plot_name]['data'][0]['x'])
             plt.plot(x_data, np.full((len(x_data)), 0), color='r', linestyle='dashed')
@@ -560,7 +592,7 @@ class ScreenOne(Screen):
         if data.orr is None:
             return
 
-        path = Path(tkfilebrowser.asksaveasfilename(initialdir=data.folder) + '.png')
+        path = Path(f'{tkfilebrowser.asksaveasfilename(initialdir=data.folder)}.png')
         if path == '.png':
             return
         return plt.savefig(fname=str(path), format='png')
@@ -656,7 +688,7 @@ class ScreenOne(Screen):
 
         def write_to_file(dict, file_path):
             with open(file_path, 'w') as file:
-                file.write('Parameter \t Value \n' + csv_from_dict(dict))
+                file.write(f'Parameter \t Value \n{csv_from_dict(dict)}')
 
         def csv_from_dict(dict):
             csv = ''
@@ -682,13 +714,13 @@ class ScreenOne(Screen):
             dir = export_path
         if dir == Path('.'):
             return
-        corr_orr_file_name = data.orr['file_name'] + '_corrected.txt'
-        anodic_file_name = data.orr['file_name'] + '_anodic.txt'
-        cathodic_file_name = data.orr['file_name'] + '_cathodic.txt'
-        parameters_ano_file_name = data.orr['file_name'] + '_parameters_anodic.txt'
-        parameters_cat_file_name = data.orr['file_name'] + '_parameters_cathodic.txt'
-        tafel_ano_file_name = data.orr['file_name'] + '_tafel_plot_anodic.txt'
-        tafel_cat_file_name = data.orr['file_name'] + '_tafel_plot_cathodic.txt'
+        corr_orr_file_name = f'{data.orr["file_name"]}_corrected.txt'
+        anodic_file_name = f'{data.orr["file_name"]}_anodic.txt'
+        cathodic_file_name = f'{data.orr["file_name"]}_cathodic.txt'
+        parameters_ano_file_name = f'{data.orr["file_name"]}_parameters_anodic.txt'
+        parameters_cat_file_name = f'{data.orr["file_name"]}_parameters_cathodic.txt'
+        tafel_ano_file_name = f'{data.orr["file_name"]}_tafel_plot_anodic.txt'
+        tafel_cat_file_name = f'{data.orr["file_name"]}_tafel_plot_cathodic.txt'
 
         orr_header_dict = {'Pot': 'Potential vs. RHE [V]',
                            'Disk': 'Disk Current Density[mA/cm2]',
@@ -774,11 +806,11 @@ class RV(RecycleView):
         super(RV, self).__init__(**kwargs)
         data_list = []
         if orr_data is not None:
-            data_list.append({'text': 'ORR: \n' + orr_data['file_name'], 'color': (0, 0, 0, 1), 'multiline': True})
+            data_list.append({'text': f'ORR: \n {orr_data["file_name"]}', 'color': (0, 0, 0, 1), 'multiline': True})
         if orr_bckg_data is not None:
-            data_list.append({'text': 'ORR background: \n' + orr_bckg_data['file_name'], 'color': (0, 0, 0, 1)})
+            data_list.append({'text': f'ORR background: \n {orr_bckg_data["file_name"]}', 'color': (0, 0, 0, 1)})
         if eis_data is not None:
-            data_list.append({'text': 'EIS: \n' + eis_data['file_name'], 'color': (0, 0, 0, 1)})
+            data_list.append({'text': f'EIS: \n {eis_data["file_name"]}', 'color': (0, 0, 0, 1)})
         self.data = data_list
         return
 

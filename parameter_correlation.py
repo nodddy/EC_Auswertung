@@ -23,7 +23,7 @@ for header_x in list(x_df):
     for header_y in list(y_df):
         lin_fit = lin_reggr(x_df[header_x], y_df[header_y])
         print(header_x, header_y, lin_fit[0])
-        if lin_fit[0] > 0.5:
+        if lin_fit[0] > 0.6:
             plt.scatter(x_df[header_x], y_df[header_y])
             plt.plot(x_df[header_x], [i * lin_fit[1] + lin_fit[2] for i in x_df[header_x]])
             plt.show()
