@@ -1,0 +1,13 @@
+('c:\\users\\magoll\\appdata\\local\\programs\\python\\python37-32\\lib\\site-packages\\pandas-0.25.1-py3.7-win32.egg',
+ None,
+ {'*.cp37-win32.pyd', '*.pyd', 'EGG-INFO', '*.pyc', '*.py', '*.pyw'},
+ 'DATA',
+ [('pandas\\_libs\\concrt140.dll',
+   'c:\\users\\magoll\\appdata\\local\\programs\\python\\python37-32\\lib\\site-packages\\pandas-0.25.1-py3.7-win32.egg\\pandas\\_libs\\concrt140.dll',
+   'DATA'),
+  ('pandas\\_libs\\msvcp140.dll',
+   'c:\\users\\magoll\\appdata\\local\\programs\\python\\python37-32\\lib\\site-packages\\pandas-0.25.1-py3.7-win32.egg\\pandas\\_libs\\msvcp140.dll',
+   'DATA'),
+  ('pandas\\io\\formats\\templates\\html.tpl',
+   'c:\\users\\magoll\\appdata\\local\\programs\\python\\python37-32\\lib\\site-packages\\pandas-0.25.1-py3.7-win32.egg\\pandas\\io\\formats\\templates\\html.tpl',
+   'DATA')])

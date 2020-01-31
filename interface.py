@@ -8,8 +8,8 @@ from kivy.uix.dropdown import DropDown
 from kivy.garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg
 from kivy.uix.popup import Popup
 from kivy.uix.recycleview import RecycleView
-from sklearn.linear_model import LinearRegression
 
+from sklearn.linear_model import LinearRegression
 import tkfilebrowser
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -119,10 +119,15 @@ class Data:
 
         def import_from_path(row_skip=0, file_path=None):
             if file_path is None:
-                path = tkfilebrowser.askopenfilename(
-                    initialdir='N:/BZ_Neu/23_char_hp/5_Ergebnisse/MGo/Masterarbeit/Daten/RDE')
+                if self.orr is not None:
+                    init_dir = Path(self.orr['path']).parents[0]
+                else:
+                    init_dir = Config.glob('INITIAL_SEARCH_DIR')
+                path = tkfilebrowser.askopenfilename(initialdir=str(init_dir))
             else:
                 path = file_path
+            if path.split('.')[-1] != 'txt':
+                raise FileNotFoundError
             file = pd.read_csv(path, sep='\t', skiprows=row_skip)
             data.set_folder(Path(path))
             return file, path
