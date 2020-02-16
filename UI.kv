@@ -21,41 +21,44 @@
             Button:
                 text: 'Import ORR'
                 id: import_orr
-                on_press: root.import_orr_single()
+                on_press: root.add_current_data()
+                on_press: root.import_orr()
                 bold: True
-                font_size: 22
+                font_size: 18
                 background_normal:'general_button.png'
             Button:
                 text: 'Import ORR \nbackground'
                 id: import_orr_backg
+                on_press: root.add_current_data()
                 on_press: root.import_orr_bckg()
                 bold: True
-                font_size: 21
+                font_size: 18
                 background_normal:'general_button.png'
             Button:
                 text: 'Import EIS'
                 id: import_eis
+                on_press: root.add_current_data()
                 on_press: root.import_eis()
                 bold: True
-                font_size: 21
+                font_size: 18
                 background_normal:'general_button.png'
             Button:
                 text: 'Correction'
-                on_press: root.open_correction_popup()
+                on_press: root.correct_orr()
                 bold: True
-                font_size: 21
+                font_size: 18
                 background_normal:'general_button.png'
             Button:
                 text: 'Analysis'
-                on_press: root.analyse_data()
+                on_press: root.analyse_orr()
                 bold: True
-                font_size: 21
+                font_size: 18
                 background_normal:'general_button.png'
             Button:
                 text: 'Export '
                 on_press: root.export_data()
                 bold: True
-                font_size: 21
+                font_size: 18
                 background_normal:'general_button.png'
 
         BoxLayout:
@@ -67,7 +70,7 @@
                 on_text:
                     root.plot_from_spinner(self.text)
                 bold: True
-                font_size: 22
+                font_size: 18
                 background_normal:'general_button.png'
 
         FloatLayout:
@@ -95,9 +98,9 @@
             pos_hint: {"top": 0.85, "center_x": 0.35}
             canvas.before:
                 Color:
-                    rgba: .24, .8, 1, 1
+                    rgba: 0, .43, .75, 1
                 Line:
-                    width: 2.5
+                    width: 1.5
                     rectangle: self.x, self.y, self.width, self.height
         BoxLayout:
             size_hint: 0.102, 0.05
@@ -106,7 +109,7 @@
                 text: 'save as png'
                 on_press: root.safe_plot_to_png()
                 bold: True
-                font_size: 22
+                font_size: 18
                 background_normal:'general_button.png'
         BoxLayout:
             size_hint: 0.102, 0.05
@@ -115,36 +118,42 @@
                 text: 'clear plot'
                 on_press: root.clear_plot()
                 bold: True
-                font_size: 22
+                font_size: 18
                 background_normal:'general_button.png'
 
         BoxLayout:
             orientation: 'horizontal'
             id: parameters
             size_hint: 0.34, 0.4
-            pos_hint: {"top": 0.6, "center_x": 2.4}
+            pos_hint: {"top": 0.5, "center_x": 0.8}
             canvas.before:
                 Color:
-                    rgba: .24, .8, 1, 1
+                    rgba: 0, .43, .75, 1
                 Line:
-                    width: 2.5
+                    width: 1.5
                     rectangle: self.x, self.y, self.width, self.height
             BoxLayout:
                 orientation: 'vertical'
-                id: cathodic
                 Label:
-                    color: 0,0,0,1
                     text: 'cathodic'
                     bold: True
-                    font_size: 20
+                    font_size: 14
+                    color: 0,0,0,1
+                    size_hint: 1, 0.15
+                BoxLayout:
+                    orientation: 'vertical'
+                    id: cathodic
             BoxLayout:
                 orientation: 'vertical'
-                id: anodic
                 Label:
-                    color: 0,0,0,1
                     text: 'anodic'
                     bold: True
-                    font_size: 20
+                    font_size: 14
+                    color: 0,0,0,1
+                    size_hint: 1, 0.15
+                BoxLayout:
+                    orientation: 'vertical'
+                    id: anodic
             BoxLayout:
                 orientation: 'vertical'
                 id: parameter
@@ -152,51 +161,55 @@
                     color: 0,0,0,1
                     text: 'Parameter'
                     bold: True
-                    font_size: 20
+                    font_size: 14
                 Label:
                     color: 0,0,0,1
                     text: 'Halfwave potential [V]'
-                    font_size: 20
+                    font_size: 14
                 Label:
                     color: 0,0,0,1
                     text: 'Onset Potential [V]'
-                    font_size: 20
+                    font_size: 14
                 Label:
                     color: 0,0,0,1
                     text: 'Peroxide Yield [%]'
-                    font_size: 20
+                    font_size: 14
                 Label:
                     color: 0,0,0,1
                     text: 'Electron transfer \nnumber'
-                    font_size: 20
+                    font_size: 14
                 Label:
                     color: 0,0,0,1
                     text: 'Activity  [mA/cm2]'
-                    font_size: 20
+                    font_size: 14
                 Label:
                     color: 0,0,0,1
                     text: 'Tafel slope  [mV/dec]'
-                    font_size: 20
+                    font_size: 14
 
         BoxLayout:
             orientation: 'vertical'
-            id: messages
-            size_hint: 0.2, 0.2
-            pos_hint: {"top": 0.85, "center_x": 0.85}
+            id: current_data
+            size_hint: 0.25, 0.2
+            pos_hint: {"top": 0.85, "center_x": 0.8}
             canvas.before:
                 Color:
-                    rgba: .24, .8, 1, 1
+                    rgba: 0, .43, .75, 1
                 Line:
-                    width: 2.5
+                    width: 1.5
                     rectangle: self.x, self.y, self.width, self.height
             Label:
                 text: 'Current Data Files'
                 color: 0,0,0,1
-                font_size: 20
+                font_size: 18
                 bold: True
-                pos_hint:{"top" : 1, "center_x" : 0.5}
-                size_hint: 1,0.1
+                size_hint: 1 , 0.2
                 halign: "center"
+            BoxLayout:
+                orientation: 'vertical'
+                id: data_labels
+
+
 
 <ScreenTwo>:
     FloatLayout:
@@ -210,27 +223,27 @@
                 id: import_cv
                 on_press: root.import_cv()
                 bold: True
-                font_size: 22
+                font_size: 18
                 background_normal:'general_button.png'
 
             Button:
                 text: 'iR correction'
                 on_press: root.ir_correction()
                 bold: True
-                font_size: 22
+                font_size: 18
                 background_normal:'general_button.png'
             Button:
                 text: 'Analysis'
                 on_press: root.analyse()
                 background_normal:''
                 bold: True
-                font_size: 22
+                font_size: 18
                 background_normal:'general_button.png'
             Button:
                 text: 'Export Data'
                 background_normal:''
                 bold: True
-                font_size: 22
+                font_size: 18
                 background_normal:'general_button.png'
         FloatLayout:
             orientation: 'vertical'
@@ -275,7 +288,7 @@
                 text: 'save as png'
                 on_press: root.safe_plot_to_png()
                 bold: True
-                font_size: 22
+                font_size: 18
                 background_normal:'general_button.png'
         BoxLayout:
             size_hint: 0.102, 0.05
@@ -284,7 +297,7 @@
                 text: 'clear plot'
                 on_press: root.clear_plot()
                 bold: True
-                font_size: 22
+                font_size: 18
                 background_normal:'general_button.png'
         BoxLayout:
             orientation: 'horizontal'
@@ -365,25 +378,25 @@
         spacing: 10
         orientation: 'vertical'
         Button:
-            font_size: 20
+            font_size: 18
             text: 'ORR analysis'
             on_press: root.dismiss()
             on_press: root.manager.current= 'screen1'
         Button:
-            font_size: 20
+            font_size: 18
             text: 'CV analysis'
             on_press: root.dismiss()
             on_press: root.manager.current= 'screen2'
         Button:
-            font_size: 20
+            font_size: 18
             text: 'Capacitance Analysis'
             on_press: root.dismiss()
             on_press: root.manager.current= 'screen3'
         Button:
-            font_size: 20
+            font_size: 18
             text: 'Placeholder'
         Button:
-            font_size: 20
+            font_size: 18
             text: 'Placeholder'
 
 
