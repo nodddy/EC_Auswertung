@@ -1,7 +1,0 @@
-('c:\\users\\magoll\\appdata\\local\\programs\\python\\python37-32\\lib\\site-packages\\python_dateutil-2.8.0-py3.7.egg',
- None,
- {'*.cp37-win32.pyd', '*.py', 'EGG-INFO', '*.pyw', '*.pyc', '*.pyd'},
- 'DATA',
- [('dateutil\\zoneinfo\\dateutil-zoneinfo.tar.gz',
-   'c:\\users\\magoll\\appdata\\local\\programs\\python\\python37-32\\lib\\site-packages\\python_dateutil-2.8.0-py3.7.egg\\dateutil\\zoneinfo\\dateutil-zoneinfo.tar.gz',
-   'DATA')])

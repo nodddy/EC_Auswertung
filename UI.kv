@@ -25,7 +25,7 @@
                 on_press: root.import_orr()
                 bold: True
                 font_size: 18
-                background_normal:'general_button.png'
+                background_normal:'img/general_button.png'
             Button:
                 text: 'Import ORR \nbackground'
                 id: import_orr_backg
@@ -33,7 +33,7 @@
                 on_press: root.import_orr_bckg()
                 bold: True
                 font_size: 18
-                background_normal:'general_button.png'
+                background_normal:'img/general_button.png'
             Button:
                 text: 'Import EIS'
                 id: import_eis
@@ -41,25 +41,25 @@
                 on_press: root.import_eis()
                 bold: True
                 font_size: 18
-                background_normal:'general_button.png'
+                background_normal:'img/general_button.png'
             Button:
                 text: 'Correction'
                 on_press: root.correct_orr()
                 bold: True
                 font_size: 18
-                background_normal:'general_button.png'
+                background_normal:'img/general_button.png'
             Button:
                 text: 'Analysis'
                 on_press: root.analyse_orr()
                 bold: True
                 font_size: 18
-                background_normal:'general_button.png'
+                background_normal:'img/general_button.png'
             Button:
                 text: 'Export '
                 on_press: root.export_data()
                 bold: True
                 font_size: 18
-                background_normal:'general_button.png'
+                background_normal:'img/general_button.png'
 
         BoxLayout:
             size_hint: 0.1, 0.05
@@ -71,7 +71,7 @@
                     root.plot_from_spinner(self.text)
                 bold: True
                 font_size: 18
-                background_normal:'general_button.png'
+                background_normal:'img/general_button.png'
 
         FloatLayout:
             orientation: 'vertical'
@@ -80,12 +80,12 @@
             Button:
                 text: 'Navigation'
                 font_color: 0,0,0,0
-                background_normal: 'background.png'
+                background_normal: 'img/background.png'
                 on_press: app.open_navigation()
                 size_hint: 1, 1
                 pos_hint:{"top":1, "center_x":0.5}
             Image:
-                source: 'navigation_button.png'
+                source: 'img/navigation_button.png'
                 y: self.parent.y
                 x: self.parent.x
                 size: 160, 160
@@ -110,7 +110,7 @@
                 on_press: root.safe_plot_to_png()
                 bold: True
                 font_size: 18
-                background_normal:'general_button.png'
+                background_normal:'img/general_button.png'
         BoxLayout:
             size_hint: 0.102, 0.05
             pos_hint: {"top": 0.195, "center_x": 0.2}
@@ -119,7 +119,7 @@
                 on_press: root.clear_plot()
                 bold: True
                 font_size: 18
-                background_normal:'general_button.png'
+                background_normal:'img/general_button.png'
 
         BoxLayout:
             orientation: 'horizontal'
@@ -224,27 +224,27 @@
                 on_press: root.import_cv()
                 bold: True
                 font_size: 18
-                background_normal:'general_button.png'
+                background_normal:'img/general_button.png'
 
             Button:
                 text: 'iR correction'
                 on_press: root.ir_correction()
                 bold: True
                 font_size: 18
-                background_normal:'general_button.png'
+                background_normal:'img/general_button.png'
             Button:
                 text: 'Analysis'
                 on_press: root.analyse()
                 background_normal:''
                 bold: True
                 font_size: 18
-                background_normal:'general_button.png'
+                background_normal:'img/general_button.png'
             Button:
                 text: 'Export Data'
                 background_normal:''
                 bold: True
                 font_size: 18
-                background_normal:'general_button.png'
+                background_normal:'img/general_button.png'
         FloatLayout:
             orientation: 'vertical'
             size_hint: 0.1, 0.1
@@ -252,12 +252,12 @@
             Button:
                 text: 'Navigation'
                 font_color: 0,0,0,0
-                background_normal: 'background.png'
+                background_normal: 'img/background.png'
                 on_press: app.open_navigation()
                 size_hint: 1, 1
                 pos_hint:{"top":1, "center_x":0.5}
             Image:
-                source: 'navigation_button.png'
+                source: 'img/navigation_button.png'
                 y: self.parent.y
                 x: self.parent.x
                 size: 160, 160
@@ -289,7 +289,7 @@
                 on_press: root.safe_plot_to_png()
                 bold: True
                 font_size: 18
-                background_normal:'general_button.png'
+                background_normal:'img/general_button.png'
         BoxLayout:
             size_hint: 0.102, 0.05
             pos_hint: {"top": 0.195, "center_x": 0.6}
@@ -298,7 +298,7 @@
                 on_press: root.clear_plot()
                 bold: True
                 font_size: 18
-                background_normal:'general_button.png'
+                background_normal:'img/general_button.png'
         BoxLayout:
             orientation: 'horizontal'
             id: parameters
@@ -345,12 +345,12 @@
             Button:
                 text: 'Navigation'
                 font_color: 0,0,0,0
-                background_normal: 'background.png'
+                background_normal: 'img/background.png'
                 on_press: app.open_navigation()
                 size_hint: 1, 1
                 pos_hint:{"top":1, "center_x":0.5}
             Image:
-                source: 'navigation_button.png'
+                source: 'img/navigation_button.png'
                 y: self.parent.y
                 x: self.parent.x
                 size: 160, 160
