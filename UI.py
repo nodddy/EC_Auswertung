@@ -5,6 +5,10 @@ from kivy.core.window import Window
 from kivy.uix.label import Label
 from kivy.garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg
 from kivy.uix.popup import Popup
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.textinput import TextInput
+from kivy.uix.image import Image
+from kivy.uix.behaviors import ButtonBehavior
 
 import pandas as pd
 import tkfilebrowser
@@ -173,11 +177,101 @@ class ScreenThree(Screen):
     pass
 
 
+class SettingsScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.current_edit = None
+
+    def on_enter(self, *args):
+        """
+        calls the update from config file on each enter on the screen
+        """
+        self.update_settings_from_config()
+
+    def update_settings_from_config(self):
+        """
+        reads the config file and adds new widgets for each header and their individual configs with values.
+        """
+        self.ids['box_settings'].clear_widgets()
+        height_hint = 1 / (1 + max([len(config._sections[key]) for key in config._sections]))
+        for key in config._sections:
+            box = BoxLayout(orientation='vertical',
+                            size_hint_y=(1 + len(config._sections[key])) * height_hint,
+                            pos_hint={'top': 1})
+            box.add_widget(Label(text=str(key),
+                                 color=(0, 0, 0, 1),
+                                 font_size=14,
+                                 bold=True))
+            for setting, val in config._sections[key].items():
+                inner_box = BoxLayout(orientation='horizontal')
+                inner_box.add_widget(Label(text=str(setting),
+                                           color=(0, 0, 0, 1),
+                                           font_size=14))
+                inner_box.add_widget(Label(text=str(val),
+                                           color=(0, 0, 0, 1),
+                                           font_size=14,
+                                           size_hint=(0.5, 0.6),
+                                           pos_hint={'center_y': 0.5}))
+                inner_box.add_widget(ImageButton(img='img/edit_button.png',
+                                                 on_press=self.edit_setting,
+                                                 size_hint=(0.6, 0.6),
+                                                 pos_hint={'center_x': 0.5, 'center_y': 0.5}))
+                box.add_widget(inner_box)
+            self.ids['box_settings'].add_widget(box)
+
+    def edit_setting(self, btn):
+        """
+        checks if a edit is currently done, if not then clears all labels and buttons from the current edited row
+        and adds a new label and textinput with the new save button
+        """
+        if self.current_edit is not None:
+            return
+        box = btn.parent
+        self.current_edit = box
+        setting = box.children[2].text
+        val = box.children[1].text
+        box.clear_widgets()
+        box.add_widget(Label(text=str(setting),
+                             color=(0, 0, 0, 1),
+                             font_size=14))
+        box.add_widget(TextInput(text=str(val),
+                                 size_hint=(0.5, 0.6),
+                                 pos_hint={'center_y': 0.5}))
+        box.add_widget(ImageButton(img='img/save_button.png',
+                                   on_press=self.save_setting,
+                                   size_hint=(0.6, 0.6),
+                                   pos_hint={'center_x': 0.5, 'center_y': 0.5}))
+        return
+
+    def save_setting(self, btn):
+        """
+        takes the button instance from the save button and writes to the config file according to the new value.
+        Afterwards resets the current edit and renews all setting widgets from the new config file
+         """
+        box = btn.parent
+        key = [widget for widget in box.parent.children if isinstance(widget, Label)][0].text
+        config._sections[key][box.children[2].text] = box.children[1].text
+        with open('config.ini', 'w') as configfile:
+            config.write(configfile)
+        self.current_edit = None
+        self.update_settings_from_config()
+        return
+
+
 class Navigation(Popup):
     def __init__(self, screen_manager, **kwargs):
         super(Navigation, self).__init__(**kwargs)
         self.manager = screen_manager
         return
+
+
+class ImageButton(ButtonBehavior, Image):
+    """
+    new button class thats takes an image path as arg and creates a button with the image
+    """
+    def __init__(self, img, **kwargs):
+        super().__init__(**kwargs)
+        self.source = img
 
 
 class Manager(ScreenManager):
@@ -187,11 +281,12 @@ class Manager(ScreenManager):
 
 class UIApp(App):
     Window.maximize()
-    DataHandler.Config.initialize()
 
     def build(self):
         global manager
         global plotter
+        global config
+        config = DataHandler.Config.initialize()
         plotter = Plotter()
         manager = Manager()
         return manager
