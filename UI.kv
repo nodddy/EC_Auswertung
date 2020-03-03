@@ -156,36 +156,16 @@
                     id: anodic
             BoxLayout:
                 orientation: 'vertical'
-                id: parameter
                 Label:
-                    color: 0,0,0,1
-                    text: 'Parameter'
+                    text: 'parameter'
                     bold: True
                     font_size: 14
-                Label:
                     color: 0,0,0,1
-                    text: 'Halfwave potential [V]'
-                    font_size: 14
-                Label:
-                    color: 0,0,0,1
-                    text: 'Onset Potential [V]'
-                    font_size: 14
-                Label:
-                    color: 0,0,0,1
-                    text: 'Peroxide Yield [%]'
-                    font_size: 14
-                Label:
-                    color: 0,0,0,1
-                    text: 'Electron transfer \nnumber'
-                    font_size: 14
-                Label:
-                    color: 0,0,0,1
-                    text: 'Activity  [mA/cm2]'
-                    font_size: 14
-                Label:
-                    color: 0,0,0,1
-                    text: 'Tafel slope  [mV/dec]'
-                    font_size: 14
+                    size_hint: 1, 0.15
+                BoxLayout:
+                    orientation: 'vertical'
+                    id: parameter
+
 
         BoxLayout:
             orientation: 'vertical'

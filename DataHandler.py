@@ -21,15 +21,22 @@ class Config:
         return cls.configParser.get('GLOBAL', key)
 
     @classmethod
+    def header(cls, key):
+        return cls.configParser.get('DATA_HEADER', key)
+
+    @classmethod
+    def exp_params(cls, key):
+        return cls.configParser.get('EXPERIMENTAL_PARAMETERS', key)
+
+    @classmethod
     def units(cls, key):
-        """Get units values from config.ini."""
         return cls.configParser.get('UNITS', key)
 
 
 class Data:
 
     def __init__(self, raw_data, path):
-        self.raw = Data.rename_header(raw_data)
+        self.raw = Data.convert_units(Data.rename_header(raw_data))
         self.path = path
         self.formatted = None
         self.corrected = None
@@ -37,12 +44,21 @@ class Data:
     @staticmethod
     def rename_header(raw_data):
         header_dict = {
-            'WE(1).Current (A)': 'Cur',
-            'WE(2).Current (A)': 'Ring',
-            'Potential applied (V)': 'Pot',
+            str(Config.header('CURRENT_HEADER')): 'Cur',
+            str(Config.header('RING_CURRENT_HEADER')): 'Ring',
+            str(Config.header('POTENTIAL_HEADER')): 'Pot',
             "Z' (\u03A9)": 'Real',
             "-Z'' (\u03A9)": 'Imag'}
         raw_data.rename(columns=header_dict, inplace=True)
+        return raw_data
+
+    @staticmethod
+    def convert_units(raw_data):
+        unit_dict = {'Cur': (lambda x: float(x) * float(Config.exp_params('ELECTRODE_AREA'))),
+                     'Ring': (lambda x: float(x) * float(Config.exp_params('ELECTRODE_AREA')))}
+        for key, func in unit_dict.items():
+            if str(key) in list(raw_data):
+                raw_data[key] = raw_data[key].map(func)
         return raw_data
 
 
@@ -79,13 +95,14 @@ class Orr(Data):
     def correct(self, orr_bckg=None, eis=None):
         orr = self.formatted.copy(deep=True)
         if eis is not None:
-            orr['Pot'] = orr['Pot'] - (orr['Cur'] * eis.x_intercept)
+            orr['Pot'] = orr['Pot'] - (orr['Cur'] * float(Config.exp_params('ELECTRODE_AREA')) * eis.x_intercept)
 
             if orr_bckg is not None:
-                orr_bckg['Pot'] = orr_bckg['Pot'] - (orr_bckg['Cur'] * eis.x_intercept)
+                orr_bckg.formatted['Pot'] = orr_bckg.formatted['Pot'] - (
+                        orr_bckg.formatted['Cur'] * float(Config.exp_params('ELECTRODE_AREA')) * eis.x_intercept)
 
         if orr_bckg is not None:
-            orr['Cur'] = orr['Cur'] - orr_bckg['Cur']
+            orr['Cur'] = orr['Cur'] - orr_bckg.formatted['Cur']
 
         self.corrected = orr
         half_scan_end = int(len(orr.index) / 2)
@@ -110,7 +127,8 @@ class OrrBckg(Data):
         formatted_orr = pd.DataFrame()
         formatted_orr['Pot'] = ((scan1['Pot'] + scan2['Pot']) / 2)
         formatted_orr['Cur'] = ((scan1['Cur'] + scan2['Cur']) / 2)
-        self.formatted = formatted_orr.reset_index(inplace=True)
+        formatted_orr.reset_index(inplace=True)
+        self.formatted = formatted_orr
         return
 
 
@@ -203,14 +221,14 @@ class OrrAnalysis(Analysis):
         X=( 2*i_ring / N ) / ( i_disk + (i_ring / N) ) * 100
         :return: the mean value of all values over potential area
         """
-        N = float(Config.glob('RRDE_N'))
+        N = float(Config.exp_params('RRDE_N'))
         orr_df = self.orr.query('0.1 < Pot < 0.75', inplace=False)
         orr_df['PeroxideYield'] = ((2 * (abs(self.orr['Ring'] / N))) / (
                 abs(self.orr['Cur']) + (abs(self.orr['Ring']) / N))) * 100
         return float(orr_df['PeroxideYield'].mean())
 
     def find_e_transfer(self):
-        N = float(Config.glob('RRDE_N'))
+        N = float(Config.exp_params('RRDE_N'))
         orr_df = self.orr.query('0.1 < Pot < 0.75', inplace=False)
         orr_df['n'] = (4 * orr_df['Cur'].abs()) / (orr_df['Cur'].abs() + (orr_df['Ring'] / N))
         return float(orr_df['n'].mean())
@@ -223,7 +241,7 @@ class OrrAnalysis(Analysis):
             orr_df = input_df.copy(deep=True)
             return orr_df.iloc[(orr_df['Pot'] - potential).abs().argsort()[:2]]['Cur'].mean()
 
-        j = find_fixed_potential(self.orr, float(Config.glob('J_KIN_POTENTIAL')))
+        j = find_fixed_potential(self.orr, float(Config.exp_params('J_KIN_POTENTIAL')))
         return float((j * self.cur_lim) / (self.cur_lim - j))
 
 
@@ -265,7 +283,6 @@ class ExportOrr(Export):
         super().__init__(path)
         self.orr = self.rename_header(analysis_instance.orr)
         self.instance = analysis_instance
-        self.export_data()
 
     def parameters_to_export_str(self):
         """

@@ -16,7 +16,7 @@ import DataHandler
 
 class Plotter:
     plot_dict = {'orr': {'x_label': 'Pot vs. RHE [V]',
-                         'y_label': 'Disk Current [A]'},
+                         'y_label': 'Disk Current [mA]'},
 
                  'eis': {'x_label': "Real Z' (\u03A9)",
                          'y_label': "Imaginary -Z'' (\u03A9)"},
@@ -40,7 +40,7 @@ class Plotter:
         plt.xlabel(self.plot_dict[plot_name]['x_label'])
         plt.ylabel(self.plot_dict[plot_name]['y_label'])
         plt.title(plot_name, pad=25, fontdict={'fontsize': 18})
-        plt.plot(x_data, y_data, label=label)
+        plt.plot(x_data, y_data * 1000, label=label)
         plt.legend()
         return self.overwrite_plot()
 
@@ -49,17 +49,17 @@ class Plotter:
             return dataset.iloc[(dataset[col] - value).abs().argsort()[:1]]
 
         row = get_point(ano_analysis.halfwave_pot, ano_analysis.orr, 'Pot')
-        plt.scatter(row['Pot'], row['Cur'], label='anodic halfwave potential')
+        plt.scatter(row['Pot'], row['Cur'] * 1000, label='anodic halfwave potential')
         row = get_point(ano_analysis.onset_pot, ano_analysis.orr, 'Pot')
-        plt.scatter(row['Pot'], row['Cur'], label='anodic onset potential')
+        plt.scatter(row['Pot'], row['Cur'] * 1000, label='anodic onset potential')
         row = get_point(cat_analysis.halfwave_pot, cat_analysis.orr, 'Pot')
-        plt.scatter(row['Pot'], row['Cur'], label='cathodic halfwave potential')
+        plt.scatter(row['Pot'], row['Cur'] * 1000, label='cathodic halfwave potential')
         row = get_point(cat_analysis.onset_pot, cat_analysis.orr, 'Pot')
-        plt.scatter(row['Pot'], row['Cur'], label='cathodic onset potential')
+        plt.scatter(row['Pot'], row['Cur'] * 1000, label='cathodic onset potential')
         row = get_point(ano_analysis.cur_lim, ano_analysis.orr, 'Cur')
-        plt.scatter(row['Pot'], row['Cur'], label='anodic limited current')
+        plt.scatter(row['Pot'], row['Cur'] * 1000, label='anodic limited current')
         row = get_point(cat_analysis.cur_lim, cat_analysis.orr, 'Cur')
-        plt.scatter(row['Pot'], row['Cur'], label='cathodic limited current')
+        plt.scatter(row['Pot'], row['Cur'] * 1000, label='cathodic limited current')
         return
 
 
@@ -76,6 +76,12 @@ class ScreenOne(Screen):
         self.current_ano_analysis = None
         self.current_cat_analysis = None
         self.current_export = None
+        self.parameter_dict = {'halfwave_pot': 'Halfwave Potential [V]',
+                               'onset_pot': 'Onset Potential [V]',
+                               'cur_lim': 'Limited Current [A/cm^2]',
+                               'activity': 'Activity [A/cm^2]',
+                               'peroxide_yield': 'Peroxide Yield [%]',
+                               'e_transfer': 'Electron Transfer Number'}
 
     def import_orr(self):
         """ imports ORR, saves as instance variable and plots it """
@@ -84,11 +90,15 @@ class ScreenOne(Screen):
                                           initialdir='C:/Users/Marius/Documents/GitHub/EC_Auswertung/Daten'))
         if str(orr_path) == '.':
             return
-        self.current_orr = DataHandler.Orr(path=orr_path,
-                                           raw_data=pd.read_csv(orr_path, sep='\t'))
+        try:
+            self.current_orr = DataHandler.Orr(path=orr_path,
+                                               raw_data=pd.read_csv(orr_path, sep='\t'))
+        except pd.core.computation.ops.UndefinedVariableError:
+            return
         plotter.plot('orr', label='Raw ORR',
                      x_data=self.current_orr.formatted['Pot'],
                      y_data=self.current_orr.formatted['Cur'])
+        return
 
     def import_orr_bckg(self):
         """ imports ORR and saves as background instance variable """
@@ -112,7 +122,7 @@ class ScreenOne(Screen):
 
     def correct_orr(self):
         """ corrects the current ORR analysis and plots the corrected ORR curve """
-        self.current_orr.correct(orr_bckg=self.current_orr_bckg.formatted,
+        self.current_orr.correct(orr_bckg=self.current_orr_bckg,
                                  eis=self.current_eis)
         plotter.plot('orr', label='Corrected ORR',
                      x_data=self.current_orr.corrected['Pot'],
@@ -142,8 +152,10 @@ class ScreenOne(Screen):
         export_dir = tkfilebrowser.askopendirname(initialdir='C:/Users/Marius/Documents/GitHub/EC_Auswertung/Daten')
         ano_export = DataHandler.ExportOrr(path=export_dir,
                                            analysis_instance=self.current_ano_analysis)
+        ano_export.export_data()
         cat_export = DataHandler.ExportOrr(path=export_dir,
                                            analysis_instance=self.current_cat_analysis)
+        cat_export.export_data()
 
     def add_current_data(self):
         label_list = [f'{data.name}:  {data.path.name}' for data in
@@ -153,7 +165,10 @@ class ScreenOne(Screen):
 
     def add_parameter_data(self):
         for box_id, instance in {'cathodic': self.current_cat_analysis, 'anodic': self.current_ano_analysis}.items():
-            label_list = [str(round(val, 3)) for val in instance.__dict__.values() if isinstance(val, float)]
+            label_list = [str(round(abs(val), 3)) for val in instance.__dict__.values() if isinstance(val, float)]
+            self.add_labels(self.ids[box_id], label_list)
+        for box_id, instance in {'parameter': self.current_ano_analysis}.items():
+            label_list = [self.parameter_dict[key] for key, val in instance.__dict__.items() if isinstance(val, float)]
             self.add_labels(self.ids[box_id], label_list)
 
     def add_labels(self, label_box, label_list):
