@@ -251,7 +251,9 @@ class SettingsScreen(Screen):
                              font_size=14))
         box.add_widget(TextInput(text=str(val),
                                  size_hint=(0.5, 0.6),
-                                 pos_hint={'center_y': 0.5}))
+                                 pos_hint={'center_y': 0.5},
+                                 multiline=False,
+                                 on_text_validate=self.save_setting))
         box.add_widget(ImageButton(img='img/save_button.png',
                                    on_press=self.save_setting,
                                    size_hint=(0.6, 0.6),

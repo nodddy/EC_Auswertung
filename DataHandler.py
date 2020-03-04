@@ -50,8 +50,7 @@ class Data:
             str(Config.header('POTENTIAL_HEADER')): 'Pot',
             "Z' (\u03A9)": 'Real',
             "-Z'' (\u03A9)": 'Imag'}
-        raw_data.rename(columns=header_dict, inplace=True)
-        return raw_data
+        return raw_data.rename(columns=header_dict)
 
     @staticmethod
     def convert_units(raw_data):
@@ -69,7 +68,7 @@ class Orr(Data):
         super().__init__(raw_data, path)
         self.cathodic = None
         self.anodic = None
-        self.format()
+        self.formatted = self.format()
         self.name = 'ORR'
 
     def format(self):
@@ -89,9 +88,7 @@ class Orr(Data):
         half_scan_end = int(len(formatted_orr.index) / 2)
         self.anodic = formatted_orr.iloc[40:half_scan_end - 40]
         self.cathodic = formatted_orr.iloc[half_scan_end + 40:-40][::-1]
-        formatted_orr.reset_index(inplace=True)
-        self.formatted = formatted_orr
-        return
+        return formatted_orr.reset_index()
 
     def correct(self, orr_bckg=None, eis=None):
         orr = self.formatted.copy(deep=True)
@@ -116,7 +113,7 @@ class OrrBckg(Data):
 
     def __init__(self, raw_data, path):
         super().__init__(raw_data, path)
-        self.format()
+        self.formatted = self.format()
         self.name = 'ORR background'
 
     def format(self):
@@ -128,9 +125,7 @@ class OrrBckg(Data):
         formatted_orr = pd.DataFrame()
         formatted_orr['Pot'] = ((scan1['Pot'] + scan2['Pot']) / 2)
         formatted_orr['Cur'] = ((scan1['Cur'] + scan2['Cur']) / 2)
-        formatted_orr.reset_index(inplace=True)
-        self.formatted = formatted_orr
-        return
+        return formatted_orr.reset_index()
 
 
 class Eis(Data):
@@ -148,17 +143,17 @@ class Eis(Data):
 class Cv(Data):
 
     def __init__(self, **kwargs):
-        super(Data, self).__init__(**kwargs)
+        super().__init__(**kwargs)
+        self.formatted = self.format()
 
     def format(self):
         raw_cv = self.raw.copy(deep=True)
-        scan2 = raw_cv.iloc[int(len(raw_cv) / 3):int((len(raw_cv) / 3) * 2)].reset_index(inplace=True)
-        scan3 = raw_cv.iloc[int((len(raw_cv) / 3) * 2):int(len(raw_cv))].reset_index(inplace=True)
+        scan2 = raw_cv.iloc[int(len(raw_cv) / 3):int((len(raw_cv) / 3) * 2)].reset_index()
+        scan3 = raw_cv.iloc[int((len(raw_cv) / 3) * 2):int(len(raw_cv))].reset_index()
         formatted_cv = pd.DataFrame()
         formatted_cv['Cur'] = (scan2['Cur'] + scan3['Cur']) / 2
         formatted_cv['Pot'] = (scan2['Pot'] + scan3['Pot']) / 2
-        self.formatted = formatted_cv
-        return
+        return formatted_cv.reset_index()
 
 
 class Analysis:
@@ -174,9 +169,9 @@ class OrrAnalysis(Analysis):
         creates analysis instance with the orr data and analyses all parameters
         :param orr: pandas dataframe with orr data, either anodic or cathodic
         """
-        super(Analysis, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.orr = orr.copy(deep=True)
-        self.differentiate()
+        self.orr['Diff1'] = self.differentiate()
         self.halfwave_pot = self.find_halfwave_pot()
         self.onset_pot = self.find_onset_pot()
         self.cur_lim = self.find_cur_lim()
@@ -189,10 +184,9 @@ class OrrAnalysis(Analysis):
     def differentiate(self):
         """
         differentiates the orr data
-        :return: Nothing
+        :return: first differential
         """
-        self.orr['Diff1'] = (self.orr['Cur'].diff() / self.orr['Pot'].diff()).dropna()
-        return
+        return (self.orr['Cur'].diff() / self.orr['Pot'].diff()).dropna()
 
     def find_halfwave_pot(self):
         """
@@ -248,7 +242,7 @@ class OrrAnalysis(Analysis):
 
 class CvAnalysis(Analysis):
     def __init__(self, **kwargs):
-        super(Analysis, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
 
 class Export:
@@ -262,8 +256,7 @@ class Export:
             'Pot': 'Potential vs. RHE [V]',
             "Z' (\u03A9)": 'Real',
             "-Z'' (\u03A9)": 'Imag'}
-        df.rename(columns=header_dict, inplace=True)
-        return df
+        return df.rename(columns=header_dict)
 
     def change_units(self, df):
         return
