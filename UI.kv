@@ -343,6 +343,44 @@
             size_hint: 0.2, 0.1
             pos_hint: {'center_x':0.8, 'top': 0.98}
 
+<SettingsScreen>:
+    FloatLayout:
+        FloatLayout:
+            orientation: 'vertical'
+            size_hint: 0.1, 0.1
+            pos_hint: {"top": 0.97, "center_x": 0.04}
+            Button:
+                text: 'Navigation'
+                font_color: 0,0,0,0
+                background_normal: 'img/background.png'
+                on_press: app.open_navigation()
+                size_hint: 1, 1
+                pos_hint: {"top":1, "center_x":0.5}
+            Image:
+                source: 'img/navigation_button.png'
+                y: self.parent.y
+                x: self.parent.x
+                size: 160, 160
+                allow_stretch: True
+        Label:
+            text: 'Settings'
+            font_size: 65
+            color: 0,0,0,1
+            italic: True
+            size_hint: 0.2, 0.1
+            pos_hint: {'center_x':0.8, 'top': 0.98}
+        BoxLayout:
+            id: box_settings
+            size_hint: 0.7 , 0.4
+            pos_hint: {'top': 0.8, 'center_x': 0.4}
+            orientation: 'horizontal'
+            canvas.before:
+                Color:
+                    rgba: .5, .5, .5, 1
+                Line:
+                    width: 1
+                    rectangle: self.x, self.y, self.width, self.height
+
 
 <Navigation>: #popup class
     size_hint: 0.18, 0.5
@@ -377,69 +415,18 @@
             text: 'Placeholder'
         Button:
             font_size: 18
-            text: 'Placeholder'
-
-
-
-<RV>: #recycleview class
-    viewclass: 'Label'
-    RecycleBoxLayout:
-        default_size: None, dp(56)
-        orientation: 'vertical'
-        default_size_hint: 1 , None
-        size_hint_y: None
-        height: self.minimum_height
-
-
-
-
-<DataCorrection>: #popup class
-    title: 'Data Correction'
-    size_hint: 0.35, 0.3
-    BoxLayout:
-        orientation: 'vertical'
-        BoxLayout:
-            id: electrode_corr
-            orientation: 'horizontal'
-            CheckBox:
-                id: electrode
-            Label:
-                text: 'Electrode calibration correction'
-            Label:
-                text: 'available'
-        BoxLayout:
-            name: 'background_corr'
-            id: background_corr
-            orientation: 'horizontal'
-            CheckBox:
-                on_active: root.on_activation(self)
-                id: bckg
-            Label:
-                text: 'Background correction'
-
-        BoxLayout:
-            name: 'eis_corr'
-            id: eis_corr
-            orientation: 'horizontal'
-            CheckBox:
-                id: eis
-                on_active: root.on_activation(self)
-            Label:
-                text: 'Electrolyte resistance correction'
-        BoxLayout:
-            orientation: 'horizontal'
-            Button:
-                text: 'Correct ORR data'
-                on_press:  root.on_corr_confirmation()
+            text: 'Settings'
+            on_press: root.dismiss()
+            on_press: root.manager.current= 'settings'
 
 <Manager>:
     id: screen_manager
-
     transition: NoTransition()
 
     screen_one: screen_one
     screen_two: screen_two
     screen_three: screen_three
+    settings_screen: settings_screen
 
     ScreenOne:
         id: screen_one
@@ -454,4 +441,9 @@
     ScreenThree:
         id: screen_three
         name: 'screen3'
+        manager: screen_manager
+
+    SettingsScreen:
+        id: settings_screen
+        name: 'settings'
         manager: screen_manager

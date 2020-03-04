@@ -14,6 +14,7 @@ class Config:
     def initialize(cls):
         """Start config by reading config.ini."""
         cls.configParser.read(cls.configFilePath)
+        return cls.configParser
 
     @classmethod
     def glob(cls, key):
@@ -297,6 +298,9 @@ class ExportOrr(Export):
         return export_str
 
     def export_data(self):
+        """
+        writes ORR dataframes to csv and parameters as txt file to the path variable of the instance
+        """
         self.orr.to_csv(self.path / f'{self.instance.stage}_orr.txt',
                         columns=['Potential vs. RHE [V]', 'Current [A]'],
                         index=False)
