@@ -7,8 +7,6 @@ from kivy.garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg
 from kivy.uix.popup import Popup
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.textinput import TextInput
-from kivy.uix.image import Image
-from kivy.uix.behaviors import ButtonBehavior
 
 import pandas as pd
 import tkfilebrowser
@@ -16,6 +14,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 import DataHandler
+import CustomWidgets as CW
 
 
 class Plotter:
@@ -35,18 +34,28 @@ class Plotter:
         pass
 
     @staticmethod
-    def overwrite_plot():
-        active_screen = manager.get_screen(manager.current)
-        active_screen.ids['plotter'].clear_widgets()
-        active_screen.ids['plotter'].add_widget(FigureCanvasKivyAgg(plt.gcf()))
+    def overwrite_plot(layout_instance, figure=None):
+        if figure is None:
+            return
+        layout_instance.ids['plotter'].clear_widgets()
+        canvas = FigureCanvasKivyAgg(figure)
+        layout_instance.ids['plotter'].add_widget(canvas)
+        return canvas
 
-    def plot(self, plot_name, label, x_data, y_data):
-        plt.xlabel(self.plot_dict[plot_name]['x_label'])
-        plt.ylabel(self.plot_dict[plot_name]['y_label'])
-        plt.title(plot_name, pad=25, fontdict={'fontsize': 18})
-        plt.plot(x_data, y_data * 1000, label=label)
-        plt.legend()
-        return self.overwrite_plot()
+    def plot(self, layout_instance, plot_name, label, x_data, y_data):
+        if not isinstance(x_data, list):
+            x_data = [x_data]
+            y_data = [y_data]
+            label = [label]
+        fig, ax = plt.subplots(1, 1)
+        for x, y, lbl in zip(x_data, y_data, label):
+            ax.plot(x, y, label=lbl)
+        ax.set_xlabel(self.plot_dict[plot_name]['x_label'])
+        ax.set_ylabel(self.plot_dict[plot_name]['y_label'])
+        ax.set_title(plot_name, pad=25, fontdict={'fontsize': 18})
+        ax.legend()
+        fig_widget = self.overwrite_plot(layout_instance, fig)
+        return fig_widget
 
     def plot_parameters(self, ano_analysis, cat_analysis):
         def get_point(value, dataset, col):
@@ -67,12 +76,44 @@ class Plotter:
         return
 
 
-class ScreenOne(Screen):
+class ScreenZero(Screen):
+    """
+    initial navigation screen
+    """
 
+    def change_screen(self, screen_name):
+        manager.current = str(screen_name)
+
+
+class ScreenOne(Screen):
     def __init__(self, **kwargs):
-        super(ScreenOne, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         Window.clearcolor = (0.9, 0.9, 0.9, 1)
         Window.borderless = False
+        self.tab_manager = None
+
+    def on_enter(self, *args):
+        """
+        sets the first instance in the dict and adds it to the parent FloatLayout. Only does it once at the first time.
+        """
+        if self.tab_manager is None:
+            instance_dict = {
+                'screen_orr': 'OrrTabContent',
+                'screen_cv': 'CvTabContent'
+            }
+            self.tab_manager = CW.TabManager(
+                content_cls=eval(instance_dict[self.name]),
+                pos_hint={'right': 1, 'top': 1},
+                size_hint=(0.92, 1)
+            )
+            self.children[0].add_widget(self.tab_manager)
+
+
+class OrrTabContent(CW.TabContent):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.current_plot = None
         self.message_list = []
         self.current_orr = None
         self.current_orr_bckg = None
@@ -99,9 +140,11 @@ class ScreenOne(Screen):
                                                raw_data=pd.read_csv(orr_path, sep='\t'))
         except pd.core.computation.ops.UndefinedVariableError:
             return
-        plotter.plot('orr', label='Raw ORR',
-                     x_data=self.current_orr.formatted['Pot'],
-                     y_data=self.current_orr.formatted['Cur'])
+        self.current_plot = plotter.plot(self, 'orr', label='Raw ORR',
+                                         x_data=self.current_orr.formatted['Pot'],
+                                         y_data=self.current_orr.formatted['Cur'])
+        active_screen = manager.get_screen(manager.current)
+        active_screen.tab_manager.rename_current_instance(new_name=self.current_orr.path.name.split('.')[0])
         return
 
     def import_orr_bckg(self):
@@ -126,33 +169,38 @@ class ScreenOne(Screen):
 
     def correct_orr(self):
         """ corrects the current ORR analysis and plots the corrected ORR curve """
+        if self.current_orr is None:
+            return
         self.current_orr.correct(orr_bckg=self.current_orr_bckg,
                                  eis=self.current_eis)
-        plotter.plot('orr', label='Corrected ORR',
-                     x_data=self.current_orr.corrected['Pot'],
-                     y_data=self.current_orr.corrected['Cur'])
+        self.current_plot = plotter.plot(self, 'orr', label='Corrected ORR',
+                                         x_data=self.current_orr.corrected['Pot'],
+                                         y_data=self.current_orr.corrected['Cur'])
 
     def analyse_orr(self):
         """
         -creates instances of ORR analysis for anodic and cathodic scans and sets them as instance variable
         -clears the current plot and plots anodic and cathodic scans with parameters
         """
+        if self.current_orr is None:
+            return
         self.current_ano_analysis = DataHandler.OrrAnalysis(orr=self.current_orr.anodic)
         self.current_ano_analysis.stage = 'anodic'
         self.current_cat_analysis = DataHandler.OrrAnalysis(orr=self.current_orr.cathodic)
         self.current_cat_analysis.stage = 'cathodic'
-        plt.cla()
-        plotter.plot('orr', label='Anodic',
-                     x_data=self.current_orr.anodic['Pot'],
-                     y_data=self.current_orr.anodic['Cur'])
-        plotter.plot('orr', label='Cathodic',
-                     x_data=self.current_orr.cathodic['Pot'],
-                     y_data=self.current_orr.cathodic['Cur'])
-        plotter.plot_parameters(self.current_ano_analysis, self.current_cat_analysis)
+        self.current_plot = plotter.plot(
+            self,
+            'orr',
+            label=['Anodic', 'Cathodic'],
+            x_data=[self.current_orr.anodic['Pot'], self.current_orr.cathodic['Pot']],
+            y_data=[self.current_orr.anodic['Cur'], self.current_orr.cathodic['Cur']])
+        # plotter.plot_parameters(self.current_ano_analysis, self.current_cat_analysis)
         self.add_parameter_data()
 
     def export_data(self):
         """ asks for export directory and creates export instances for anodic and cathodic scans """
+        if self.current_orr is None:
+            return
         export_dir = tkfilebrowser.askopendirname(initialdir='C:/Users/Marius/Documents/GitHub/EC_Auswertung/Daten')
         ano_export = DataHandler.ExportOrr(path=export_dir,
                                            analysis_instance=self.current_ano_analysis)
@@ -183,9 +231,22 @@ class ScreenOne(Screen):
                 color=(0, 0, 0, 1),
                 font_size=14))
 
+    def clear_plot(self):
+        self.ids['plotter'].clear_widgets()
+        self.current_plot = None
 
-class ScreenTwo(Screen):
-    pass
+    def safe_plot_to_png(self):
+        if self.current_plot is None:
+            return
+        else:
+            self.current_plot.print_png(
+                f'{self.current_orr.path.parents[0] / self.current_orr.path.name.split(".")[0]}.png')
+
+
+class CvTabContent(CW.TabContent):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.current_plot = None
 
 
 class ScreenThree(Screen):
@@ -227,10 +288,10 @@ class SettingsScreen(Screen):
                                            font_size=14,
                                            size_hint=(0.5, 0.6),
                                            pos_hint={'center_y': 0.5}))
-                inner_box.add_widget(ImageButton(img='img/edit_button.png',
-                                                 on_press=self.edit_setting,
-                                                 size_hint=(0.6, 0.6),
-                                                 pos_hint={'center_x': 0.5, 'center_y': 0.5}))
+                inner_box.add_widget(CW.ImageButton(img='img/edit_button.png',
+                                                    on_press=self.edit_setting,
+                                                    size_hint=(0.6, 0.6),
+                                                    pos_hint={'center_x': 0.5, 'center_y': 0.5}))
                 box.add_widget(inner_box)
             self.ids['box_settings'].add_widget(box)
 
@@ -254,10 +315,10 @@ class SettingsScreen(Screen):
                                  pos_hint={'center_y': 0.5},
                                  multiline=False,
                                  on_text_validate=self.save_setting))
-        box.add_widget(ImageButton(img='img/save_button.png',
-                                   on_press=self.save_setting,
-                                   size_hint=(0.6, 0.6),
-                                   pos_hint={'center_x': 0.5, 'center_y': 0.5}))
+        box.add_widget(CW.ImageButton(img='img/save_button.png',
+                                      on_press=self.save_setting,
+                                      size_hint=(0.6, 0.6),
+                                      pos_hint={'center_x': 0.5, 'center_y': 0.5}))
         return
 
     def save_setting(self, btn):
@@ -280,15 +341,6 @@ class Navigation(Popup):
         super(Navigation, self).__init__(**kwargs)
         self.manager = screen_manager
         return
-
-
-class ImageButton(ButtonBehavior, Image):
-    """
-    new button class thats takes an image path as arg and creates a button with the image
-    """
-    def __init__(self, img, **kwargs):
-        super().__init__(**kwargs)
-        self.source = img
 
 
 class Manager(ScreenManager):

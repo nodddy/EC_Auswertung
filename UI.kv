@@ -1,69 +1,134 @@
 #:import NoTransition kivy.uix.screenmanager.NoTransition
 
+<ScreenZero>:
+    BoxLayout:
+        size_hint: 0.25, 0.35
+        pos_hint: {"center_x": 0.5, "top": 0.7}
+        spacing: 10
+        orientation: 'vertical'
+        Button:
+            font_size: 18
+            text: 'ORR analysis'
+            on_press: root.change_screen('screen_orr')
+        Button:
+            font_size: 18
+            text: 'CV analysis'
+            on_press: root.change_screen('screen_cv')
+        Button:
+            font_size: 18
+            text: 'Capacitance Analysis'
+            on_press: root.change_screen('screen3')
+        Button:
+            font_size: 18
+            text: 'Placeholder'
+        Button:
+            font_size: 18
+            text: 'Settings'
+            on_press: root.change_screen('settings')
 
 <ScreenOne>:
     FloatLayout:
+        FloatLayout:
+            orientation: 'vertical'
+            size_hint: 0.1, 0.1
+            pos_hint:{"top":0.97, "center_x":0.04}
+            Button:
+                text: 'Navigation'
+                font_color: 0,0,0,0
+                background_normal: 'img/background.png'
+                on_press: app.open_navigation()
+                size_hint: 1, 1
+                pos_hint:{"top":1, "center_x":0.5}
+            Image:
+                source: 'img/navigation_button.png'
+                y: self.parent.y
+                x: self.parent.x
+                size: 160, 160
+                allow_stretch: True
 
-        Label:
-            text: 'ORR analysis'
-            font_size: 65
-            color: 0,0,0,1
-            italic: True
+<OrrTabContent>:
+    Label:
+        text: 'ORR analysis'
+        font_size: 65
+        color: 0,0,0,1
+        italic: True
+        size_hint: 0.2, 0.1
+        pos_hint: {'center_x':0.8, 'top': 0.98}
+
+    BoxLayout:
+        id: boxlayout
+        size_hint: 0.45, 0.1
+        pos_hint:{"top":1, "left":0}
+        spacing: 5
+        Button:
+            text: 'Import ORR'
+            id: import_orr
+            on_press: root.add_current_data()
+            on_press: root.import_orr()
+            bold: True
+            font_size: 18
+            background_normal:'img/general_button.png'
+        Button:
+            text: 'Import ORR \nbackground'
+            id: import_orr_backg
+            on_press: root.add_current_data()
+            on_press: root.import_orr_bckg()
+            bold: True
+            font_size: 18
+            background_normal:'img/general_button.png'
+        Button:
+            text: 'Import EIS'
+            id: import_eis
+            on_press: root.add_current_data()
+            on_press: root.import_eis()
+            bold: True
+            font_size: 18
+            background_normal:'img/general_button.png'
+        Button:
+            text: 'Correction'
+            on_press: root.correct_orr()
+            bold: True
+            font_size: 18
+            background_normal:'img/general_button.png'
+        Button:
+            text: 'Analysis'
+            on_press: root.analyse_orr()
+            bold: True
+            font_size: 18
+            background_normal:'img/general_button.png'
+        Button:
+            text: 'Export '
+            on_press: root.export_data()
+            bold: True
+            font_size: 18
+            background_normal:'img/general_button.png'
+
+    RelativeLayout:
+        size_hint: 0.5, 0.65
+        pos_hint: {'left': 0, 'top': 0.85}
+        BoxLayout:
+            orientation: 'vertical'
+            id: plotter
+            size_hint: 1, 0.88
+            pos_hint: {"top": 1, "left": 0}
+            canvas.before:
+                Color:
+                    rgba: 0, .43, .75, 1
+                Line:
+                    width: 1.5
+                    rectangle: self.x, self.y, self.width, self.height
+        BoxLayout:
             size_hint: 0.2, 0.1
-            pos_hint: {'center_x':0.8, 'top': 0.98}
-
-
+            pos_hint: {"top": 0.1, "left": 0}
+            Button:
+                text: 'clear plot'
+                on_press: root.clear_plot()
+                bold: True
+                font_size: 18
+                background_normal:'img/general_button.png'
         BoxLayout:
-            id: boxlayout
-            size_hint: 0.45, 0.1
-            pos_hint:{"top":0.97, "center_x":0.35}
-            spacing: 5
-            Button:
-                text: 'Import ORR'
-                id: import_orr
-                on_press: root.add_current_data()
-                on_press: root.import_orr()
-                bold: True
-                font_size: 18
-                background_normal:'img/general_button.png'
-            Button:
-                text: 'Import ORR \nbackground'
-                id: import_orr_backg
-                on_press: root.add_current_data()
-                on_press: root.import_orr_bckg()
-                bold: True
-                font_size: 18
-                background_normal:'img/general_button.png'
-            Button:
-                text: 'Import EIS'
-                id: import_eis
-                on_press: root.add_current_data()
-                on_press: root.import_eis()
-                bold: True
-                font_size: 18
-                background_normal:'img/general_button.png'
-            Button:
-                text: 'Correction'
-                on_press: root.correct_orr()
-                bold: True
-                font_size: 18
-                background_normal:'img/general_button.png'
-            Button:
-                text: 'Analysis'
-                on_press: root.analyse_orr()
-                bold: True
-                font_size: 18
-                background_normal:'img/general_button.png'
-            Button:
-                text: 'Export '
-                on_press: root.export_data()
-                bold: True
-                font_size: 18
-                background_normal:'img/general_button.png'
-
-        BoxLayout:
-            size_hint: 0.1, 0.05
-            pos_hint: {"top":0.195, "center_x": 0.4}
+            size_hint: 0.2, 0.1
+            pos_hint: {"top":0.1, "center_x": 0.5}
             Spinner:
                 text: 'Plot Data'
                 id: plot_spinner
@@ -72,248 +137,191 @@
                 bold: True
                 font_size: 18
                 background_normal:'img/general_button.png'
-
-        FloatLayout:
-            orientation: 'vertical'
-            size_hint: 0.1, 0.1
-            pos_hint:{"top":0.97, "center_x":0.04}
-            Button:
-                text: 'Navigation'
-                font_color: 0,0,0,0
-                background_normal: 'img/background.png'
-                on_press: app.open_navigation()
-                size_hint: 1, 1
-                pos_hint:{"top":1, "center_x":0.5}
-            Image:
-                source: 'img/navigation_button.png'
-                y: self.parent.y
-                x: self.parent.x
-                size: 160, 160
-                allow_stretch: True
-
         BoxLayout:
-            orientation: 'vertical'
-            id: plotter
-            size_hint: 0.45, 0.65
-            pos_hint: {"top": 0.85, "center_x": 0.35}
-            canvas.before:
-                Color:
-                    rgba: 0, .43, .75, 1
-                Line:
-                    width: 1.5
-                    rectangle: self.x, self.y, self.width, self.height
-        BoxLayout:
-            size_hint: 0.102, 0.05
-            pos_hint: {"top": 0.195, "center_x": 0.5}
-            Button:
-                text: 'save as png'
-                on_press: root.safe_plot_to_png()
-                bold: True
-                font_size: 18
-                background_normal:'img/general_button.png'
-        BoxLayout:
-            size_hint: 0.102, 0.05
-            pos_hint: {"top": 0.195, "center_x": 0.2}
-            Button:
-                text: 'clear plot'
-                on_press: root.clear_plot()
-                bold: True
-                font_size: 18
-                background_normal:'img/general_button.png'
-
-        BoxLayout:
-            orientation: 'horizontal'
-            id: parameters
-            size_hint: 0.34, 0.4
-            pos_hint: {"top": 0.5, "center_x": 0.8}
-            canvas.before:
-                Color:
-                    rgba: 0, .43, .75, 1
-                Line:
-                    width: 1.5
-                    rectangle: self.x, self.y, self.width, self.height
-            BoxLayout:
-                orientation: 'vertical'
-                Label:
-                    text: 'cathodic'
-                    bold: True
-                    font_size: 14
-                    color: 0,0,0,1
-                    size_hint: 1, 0.15
-                BoxLayout:
-                    orientation: 'vertical'
-                    id: cathodic
-            BoxLayout:
-                orientation: 'vertical'
-                Label:
-                    text: 'anodic'
-                    bold: True
-                    font_size: 14
-                    color: 0,0,0,1
-                    size_hint: 1, 0.15
-                BoxLayout:
-                    orientation: 'vertical'
-                    id: anodic
-            BoxLayout:
-                orientation: 'vertical'
-                Label:
-                    text: 'parameter'
-                    bold: True
-                    font_size: 14
-                    color: 0,0,0,1
-                    size_hint: 1, 0.15
-                BoxLayout:
-                    orientation: 'vertical'
-                    id: parameter
-
-
-        BoxLayout:
-            orientation: 'vertical'
-            id: current_data
-            size_hint: 0.25, 0.2
-            pos_hint: {"top": 0.85, "center_x": 0.8}
-            canvas.before:
-                Color:
-                    rgba: 0, .43, .75, 1
-                Line:
-                    width: 1.5
-                    rectangle: self.x, self.y, self.width, self.height
-            Label:
-                text: 'Current Data Files'
-                color: 0,0,0,1
-                font_size: 18
-                bold: True
-                size_hint: 1 , 0.2
-                halign: "center"
-            BoxLayout:
-                orientation: 'vertical'
-                id: data_labels
-
-
-
-<ScreenTwo>:
-    FloatLayout:
-        BoxLayout:
-            id: boxlayout
-            size_hint: 0.34, 0.1
-            pos_hint:{"top":0.95, "center_x":0.3}
-            spacing: 5
-            Button:
-                text: 'Import CV'
-                id: import_cv
-                on_press: root.import_cv()
-                bold: True
-                font_size: 18
-                background_normal:'img/general_button.png'
-
-            Button:
-                text: 'iR correction'
-                on_press: root.ir_correction()
-                bold: True
-                font_size: 18
-                background_normal:'img/general_button.png'
-            Button:
-                text: 'Analysis'
-                on_press: root.analyse()
-                background_normal:''
-                bold: True
-                font_size: 18
-                background_normal:'img/general_button.png'
-            Button:
-                text: 'Export Data'
-                background_normal:''
-                bold: True
-                font_size: 18
-                background_normal:'img/general_button.png'
-        FloatLayout:
-            orientation: 'vertical'
-            size_hint: 0.1, 0.1
-            pos_hint:{"top":0.97, "center_x":0.04}
-            Button:
-                text: 'Navigation'
-                font_color: 0,0,0,0
-                background_normal: 'img/background.png'
-                on_press: app.open_navigation()
-                size_hint: 1, 1
-                pos_hint:{"top":1, "center_x":0.5}
-            Image:
-                source: 'img/navigation_button.png'
-                y: self.parent.y
-                x: self.parent.x
-                size: 160, 160
-                allow_stretch: True
-        Label:
-            text: 'CV analysis'
-            font_size: 65
-            color: 0,0,0,1
-            italic: True
             size_hint: 0.2, 0.1
-            pos_hint: {'center_x':0.8, 'top': 0.98}
-
-        BoxLayout:
-            orientation: 'vertical'
-            id: plotter
-            size_hint: 0.4, 0.65
-            pos_hint: {"top": 0.85, "center_x": 0.75}
-            canvas.before:
-                Color:
-                    rgba: .5, .5, .5, 1
-                Line:
-                    width: 1
-                    rectangle: self.x, self.y, self.width, self.height
-        BoxLayout:
-            size_hint: 0.102, 0.05
-            pos_hint: {"top": 0.195, "center_x": 0.9}
+            pos_hint: {"top": 0.1, "right": 1}
             Button:
                 text: 'save as png'
                 on_press: root.safe_plot_to_png()
                 bold: True
                 font_size: 18
                 background_normal:'img/general_button.png'
+
+
+    BoxLayout:
+        orientation: 'horizontal'
+        id: parameters
+        size_hint: 0.34, 0.4
+        pos_hint: {"top": 0.5, "center_x": 0.8}
+        canvas.before:
+            Color:
+                rgba: 0, .43, .75, 1
+            Line:
+                width: 1.5
+                rectangle: self.x, self.y, self.width, self.height
         BoxLayout:
-            size_hint: 0.102, 0.05
-            pos_hint: {"top": 0.195, "center_x": 0.6}
-            Button:
-                text: 'clear plot'
-                on_press: root.clear_plot()
+            orientation: 'vertical'
+            Label:
+                text: 'cathodic'
                 bold: True
-                font_size: 18
-                background_normal:'img/general_button.png'
-        BoxLayout:
-            orientation: 'horizontal'
-            id: parameters
-            size_hint: 0.26, 0.2
-            pos_hint: {"top": 0.6, "center_x": 2.82}
-            canvas.before:
-                Color:
-                    rgba: .5, .5, .5, 1
-                Line:
-                    width: 1
-                    rectangle: self.x, self.y, self.width, self.height
+                font_size: 14
+                color: 0,0,0,1
+                size_hint: 1, 0.15
             BoxLayout:
                 orientation: 'vertical'
                 id: cathodic
-                Label:
-                    color: 0,0,0,1
-                    text: 'cathodic'
-                    bold: True
+        BoxLayout:
+            orientation: 'vertical'
+            Label:
+                text: 'anodic'
+                bold: True
+                font_size: 14
+                color: 0,0,0,1
+                size_hint: 1, 0.15
             BoxLayout:
                 orientation: 'vertical'
                 id: anodic
-                Label:
-                    color: 0,0,0,1
-                    text: 'anodic'
-                    bold: True
+        BoxLayout:
+            orientation: 'vertical'
+            Label:
+                text: 'parameter'
+                bold: True
+                font_size: 14
+                color: 0,0,0,1
+                size_hint: 1, 0.15
             BoxLayout:
                 orientation: 'vertical'
                 id: parameter
-                Label:
-                    color: 0,0,0,1
-                    text: 'Parameter'
-                    bold: True
-                Label:
-                    color: 0,0,0,1
-                    text: 'EASA [m2/g_Pt]'
+    BoxLayout:
+        orientation: 'vertical'
+        id: current_data
+        size_hint: 0.25, 0.2
+        pos_hint: {"top": 0.85, "center_x": 0.8}
+        canvas.before:
+            Color:
+                rgba: 0, .43, .75, 1
+            Line:
+                width: 1.5
+                rectangle: self.x, self.y, self.width, self.height
+        Label:
+            text: 'Current Data Files'
+            color: 0,0,0,1
+            font_size: 18
+            bold: True
+            size_hint: 1 , 0.2
+            halign: "center"
+        BoxLayout:
+            orientation: 'vertical'
+            id: data_labels
+
+
+
+<CvTabContent>:
+    pos_hint: {'right':1, 'top': 0.92}
+    BoxLayout:
+        id: boxlayout
+        size_hint: 0.34, 0.1
+        pos_hint:{"top":0.95, "center_x":0.3}
+        spacing: 5
+        Button:
+            text: 'Import CV'
+            id: import_cv
+            on_press: root.import_cv()
+            bold: True
+            font_size: 18
+            background_normal:'img/general_button.png'
+
+        Button:
+            text: 'iR correction'
+            on_press: root.ir_correction()
+            bold: True
+            font_size: 18
+            background_normal:'img/general_button.png'
+        Button:
+            text: 'Analysis'
+            on_press: root.analyse()
+            background_normal:''
+            bold: True
+            font_size: 18
+            background_normal:'img/general_button.png'
+        Button:
+            text: 'Export Data'
+            background_normal:''
+            bold: True
+            font_size: 18
+            background_normal:'img/general_button.png'
+    Label:
+        text: 'CV analysis'
+        font_size: 65
+        color: 0,0,0,1
+        italic: True
+        size_hint: 0.2, 0.1
+        pos_hint: {'center_x':0.8, 'top': 0.98}
+
+    BoxLayout:
+        orientation: 'vertical'
+        id: plotter
+        size_hint: 0.4, 0.65
+        pos_hint: {"top": 0.85, "center_x": 0.75}
+        canvas.before:
+            Color:
+                rgba: .5, .5, .5, 1
+            Line:
+                width: 1
+                rectangle: self.x, self.y, self.width, self.height
+    BoxLayout:
+        size_hint: 0.102, 0.05
+        pos_hint: {"top": 0.195, "center_x": 0.9}
+        Button:
+            text: 'save as png'
+            on_press: root.safe_plot_to_png()
+            bold: True
+            font_size: 18
+            background_normal:'img/general_button.png'
+    BoxLayout:
+        size_hint: 0.102, 0.05
+        pos_hint: {"top": 0.195, "center_x": 0.6}
+        Button:
+            text: 'clear plot'
+            on_press: root.clear_plot()
+            bold: True
+            font_size: 18
+            background_normal:'img/general_button.png'
+    BoxLayout:
+        orientation: 'horizontal'
+        id: parameters
+        size_hint: 0.26, 0.2
+        pos_hint: {"top": 0.6, "center_x": 2.82}
+        canvas.before:
+            Color:
+                rgba: .5, .5, .5, 1
+            Line:
+                width: 1
+                rectangle: self.x, self.y, self.width, self.height
+        BoxLayout:
+            orientation: 'vertical'
+            id: cathodic
+            Label:
+                color: 0,0,0,1
+                text: 'cathodic'
+                bold: True
+        BoxLayout:
+            orientation: 'vertical'
+            id: anodic
+            Label:
+                color: 0,0,0,1
+                text: 'anodic'
+                bold: True
+        BoxLayout:
+            orientation: 'vertical'
+            id: parameter
+            Label:
+                color: 0,0,0,1
+                text: 'Parameter'
+                bold: True
+            Label:
+                color: 0,0,0,1
+                text: 'EASA [m2/g_Pt]'
 
 
 <ScreenThree>:
@@ -399,12 +407,12 @@
             font_size: 18
             text: 'ORR analysis'
             on_press: root.dismiss()
-            on_press: root.manager.current= 'screen1'
+            on_press: root.manager.current= 'screen_orr'
         Button:
             font_size: 18
             text: 'CV analysis'
             on_press: root.dismiss()
-            on_press: root.manager.current= 'screen2'
+            on_press: root.manager.current= 'screen_cv'
         Button:
             font_size: 18
             text: 'Capacitance Analysis'
@@ -419,6 +427,8 @@
             on_press: root.dismiss()
             on_press: root.manager.current= 'settings'
 
+<ImageButton>:
+
 <Manager>:
     id: screen_manager
     transition: NoTransition()
@@ -428,14 +438,19 @@
     screen_three: screen_three
     settings_screen: settings_screen
 
-    ScreenOne:
-        id: screen_one
-        name: 'screen1'
+    ScreenZero:
+        id: screen_zero
+        name: 'screen0'
         manager: screen_manager
 
-    ScreenTwo:
+    ScreenOne:
+        id: screen_one
+        name: 'screen_orr'
+        manager: screen_manager
+
+    ScreenOne:
         id: screen_two
-        name: 'screen2'
+        name: 'screen_cv'
         manager: screen_manager
 
     ScreenThree:
