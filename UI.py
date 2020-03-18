@@ -55,25 +55,23 @@ class Plotter:
         ax.set_title(plot_name, pad=25, fontdict={'fontsize': 18})
         ax.legend()
         fig_widget = self.overwrite_plot(layout_instance, fig)
-        return fig_widget
+        return fig_widget, ax
 
-    def plot_parameters(self, ano_analysis, cat_analysis):
+    def plot_parameters(self, fig_widget, ax_widget, ano_analysis, cat_analysis):
+
         def get_point(value, dataset, col):
             return dataset.iloc[(dataset[col] - value).abs().argsort()[:1]]
 
-        row = get_point(ano_analysis.halfwave_pot, ano_analysis.orr, 'Pot')
-        plt.scatter(row['Pot'], row['Cur'] * 1000, label='anodic halfwave potential')
-        row = get_point(ano_analysis.onset_pot, ano_analysis.orr, 'Pot')
-        plt.scatter(row['Pot'], row['Cur'] * 1000, label='anodic onset potential')
-        row = get_point(cat_analysis.halfwave_pot, cat_analysis.orr, 'Pot')
-        plt.scatter(row['Pot'], row['Cur'] * 1000, label='cathodic halfwave potential')
-        row = get_point(cat_analysis.onset_pot, cat_analysis.orr, 'Pot')
-        plt.scatter(row['Pot'], row['Cur'] * 1000, label='cathodic onset potential')
-        row = get_point(ano_analysis.cur_lim, ano_analysis.orr, 'Cur')
-        plt.scatter(row['Pot'], row['Cur'] * 1000, label='anodic limited current')
-        row = get_point(cat_analysis.cur_lim, cat_analysis.orr, 'Cur')
-        plt.scatter(row['Pot'], row['Cur'] * 1000, label='cathodic limited current')
-        return
+        row_list = []
+        for scan in [ano_analysis, cat_analysis]:
+            for param in ['halfwave_pot', 'onset_pot', 'cur_lim']:
+                col_ident = [id.capitalize() for id in param.split('_') if 'pot' in id or 'cur' in id][0]
+                row = get_point(getattr(scan, param), getattr(scan, 'orr'), col_ident)
+                row_list.append(row)
+
+        for item in row_list:
+            ax_widget.scatter(item['Pot'], item['Cur'])
+        return fig_widget.draw()
 
 
 class ScreenZero(Screen):
@@ -142,7 +140,7 @@ class OrrTabContent(CW.TabContent):
             return
         self.current_plot = plotter.plot(self, 'orr', label='Raw ORR',
                                          x_data=self.current_orr.formatted['Pot'],
-                                         y_data=self.current_orr.formatted['Cur'])
+                                         y_data=self.current_orr.formatted['Cur'])[0]
         active_screen = manager.get_screen(manager.current)
         active_screen.tab_manager.rename_current_instance(new_name=self.current_orr.path.name.split('.')[0])
         return
@@ -175,7 +173,7 @@ class OrrTabContent(CW.TabContent):
                                  eis=self.current_eis)
         self.current_plot = plotter.plot(self, 'orr', label='Corrected ORR',
                                          x_data=self.current_orr.corrected['Pot'],
-                                         y_data=self.current_orr.corrected['Cur'])
+                                         y_data=self.current_orr.corrected['Cur'])[0]
 
     def analyse_orr(self):
         """
@@ -188,13 +186,19 @@ class OrrTabContent(CW.TabContent):
         self.current_ano_analysis.stage = 'anodic'
         self.current_cat_analysis = DataHandler.OrrAnalysis(orr=self.current_orr.cathodic)
         self.current_cat_analysis.stage = 'cathodic'
-        self.current_plot = plotter.plot(
+        self.current_plot, axes_widget = plotter.plot(
             self,
             'orr',
             label=['Anodic', 'Cathodic'],
             x_data=[self.current_orr.anodic['Pot'], self.current_orr.cathodic['Pot']],
-            y_data=[self.current_orr.anodic['Cur'], self.current_orr.cathodic['Cur']])
-        # plotter.plot_parameters(self.current_ano_analysis, self.current_cat_analysis)
+            y_data=[self.current_orr.anodic['Cur'], self.current_orr.cathodic['Cur']]
+        )
+        plotter.plot_parameters(
+            self.current_plot,
+            axes_widget,
+            self.current_ano_analysis,
+            self.current_cat_analysis
+        )
         self.add_parameter_data()
 
     def export_data(self):
