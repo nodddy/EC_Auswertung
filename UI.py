@@ -12,7 +12,6 @@ import pandas as pd
 import tkfilebrowser
 import matplotlib.pyplot as plt
 from pathlib import Path
-import os
 
 import DataHandler
 import CustomWidgets as CW
