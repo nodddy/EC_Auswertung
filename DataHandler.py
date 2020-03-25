@@ -2,6 +2,10 @@ import pandas as pd
 from configparser import ConfigParser
 import os
 from pathlib import Path
+import numpy as np
+from scipy import integrate
+from sklearn.linear_model import LinearRegression
+import re
 
 
 class Config:
@@ -30,6 +34,10 @@ class Config:
         return cls.configParser.get('EXPERIMENTAL_PARAMETERS', key)
 
     @classmethod
+    def exp_params_bool(cls, key):
+        return cls.configParser.getboolean('EXPERIMENTAL_PARAMETERS', key)
+
+    @classmethod
     def units(cls, key):
         return cls.configParser.get('UNITS', key)
 
@@ -49,13 +57,21 @@ class Data:
             str(Config.header('RING_CURRENT_HEADER')): 'Ring',
             str(Config.header('POTENTIAL_HEADER')): 'Pot',
             "Z' (\u03A9)": 'Real',
-            "-Z'' (\u03A9)": 'Imag'}
+            "-Z'' (\u03A9)": 'Imag',
+            str(Config.header('TESTBENCH_POTENTIAL_HEADER')): 'Pot',
+            str(Config.header('TESTBENCH_CURRENT_HEADER')): 'Cur',
+            str(Config.header('TESTBENCH_TIME_HEADER')): 'Time',
+            str(Config.header('TESTBENCH_EIS_REAL_HEADER')): 'Real',
+            str(Config.header('TESTBENCH_EIS_IMAG_HEADER')): 'Imag'
+        }
+        raw_data.rename(columns=lambda x: x.replace(' ', ''), inplace=True)
+        header_dict = {k.replace(' ', ''): v for (k, v) in header_dict.items()}
         return raw_data.rename(columns=header_dict)
 
     @staticmethod
     def convert_units(raw_data):
-        unit_dict = {'Cur': (lambda x: float(x) * float(Config.exp_params('ELECTRODE_AREA'))),
-                     'Ring': (lambda x: float(x) * float(Config.exp_params('ELECTRODE_AREA')))}
+        unit_dict = {'Cur': (lambda x: (float(x) * 1000) / float(Config.exp_params('ELECTRODE_AREA'))),
+                     'Ring': (lambda x: (float(x) * 1000) / float(Config.exp_params('ELECTRODE_AREA')))}
         for key, func in unit_dict.items():
             if str(key) in list(raw_data):
                 raw_data[key] = raw_data[key].map(func)
@@ -156,8 +172,94 @@ class Cv(Data):
         return formatted_cv.reset_index()
 
 
-class Analysis:
+class Lsv(Data):
 
+    def __init__(self, raw_data, path):
+        super().__init__(raw_data, path)
+        self.formatted = self.format()
+        self.res_slope, self.res_intercept = self.find_resistance()
+        self.name = 'LSV'
+        self.corrected = self.correct()
+
+    def format(self):
+        return self.raw.copy(deep=True)
+
+    def find_resistance(self):
+        pot_range = (0.3, 0.4)
+        df_slice = self.formatted.query(
+            f'{pot_range[0]} < Pot < {pot_range[1]}',
+            inplace=False
+        )
+        x = np.asarray(df_slice['Pot']).astype(np.float64).reshape(-1, 1)
+        y = np.asarray(df_slice['Cur']).astype(np.float64)
+        model = LinearRegression().fit(x, y)
+        return model.coef_[0], model.intercept_
+
+    def correct(self):
+        corrected_lsv = self.formatted.copy(deep=True)
+        corrected_lsv['Cur'] = corrected_lsv['Cur'] - (
+                corrected_lsv['Pot']
+                * self.res_slope
+                + self.res_intercept
+        )
+        return corrected_lsv
+
+
+class CvTestbench(Data):
+
+    def __init__(self, raw_data, path):
+        super().__init__(raw_data, path)
+        if Config.exp_params_bool('CV_FORMAT_AUTO') is True:
+            self.formatted = self.format_auto()
+        else:
+            self.formatted = self.format_manual(Config.exp_params('CV_FORMAT_TIME_LIMIT'))
+        self.corrected = None
+        self.name = 'CV'
+
+    def format_auto(self):
+        """
+
+        """
+        raw_cv = self.raw.copy(deep=True)
+        max_pot = raw_cv['Pot'].max()
+        min_pot = raw_cv['Pot'].min()
+        max_pot_df = raw_cv.query(
+            f'Pot == {max_pot}',
+            inplace=False
+        )
+        min_pot_df = raw_cv.query(
+            f'Pot == {min_pot}',
+            inplace=False
+        )
+        half_scan_duration = (max_pot_df['Time'].values - min_pot_df['Time'].values).min() + 0.1
+        last_time_val = raw_cv['Time'].iloc[raw_cv['Time'].last_valid_index()]
+        scan_number = round(last_time_val / (half_scan_duration * 2), 0) - float(Config.exp_params('CV_SCAN_USED'))
+        lower_time_limit = (last_time_val - ((half_scan_duration * 2) * (scan_number + 1)))
+        upper_time_limit = last_time_val - ((half_scan_duration * 2) * scan_number)
+        scan = raw_cv.query(
+            f'{lower_time_limit} < Time < {upper_time_limit}',
+            inplace=False
+        )
+        return scan.reset_index(inplace=False)
+
+    def format_manual(self, time_limit):
+        raw_cv = self.raw.copy(deep=True)
+        return raw_cv.query(
+            f'{time_limit[0]} < Time < {time_limit[1]}',
+            inplace=False
+        )
+
+    def correct(self, slope, intercept):
+        corrected_cv = self.formatted.copy(deep=True)
+        corrected_cv['Cur'] = corrected_cv['Cur'] - (
+                corrected_cv['Pot']
+                * slope
+                + intercept
+        )
+        self.corrected = corrected_cv
+
+
+class Analysis:
     def __init__(self):
         pass
 
@@ -241,8 +343,57 @@ class OrrAnalysis(Analysis):
 
 
 class CvAnalysis(Analysis):
-    def __init__(self, **kwargs):
+    def __init__(self, cv_df, **kwargs):
         super().__init__(**kwargs)
+        self.pot_range = (0.3, 0.6)
+        self.ecsa, self.ecsa_curve = self.find_ecsa(
+            cv_df.query('Cur > 0',
+                        inplace=False)
+        )
+
+    def find_ecsa(self, cv_df):
+        def integrate_curve(curve_y, curve_x):
+            return integrate.trapz(curve_y, curve_x)
+
+        def find_curve_section(cv_data, lower_pot, upper_pot):
+            min_point = cv_data.query(f'{lower_pot} < Pot < {upper_pot}', inplace=False)
+            min_point_cur = min_point['Cur'].min()
+            min_point_pot = min_point.query(f'Cur == {min_point_cur}')['Pot'].iloc[0]
+            return cv_data.query(
+                f' Pot <= {min_point_pot} and Cur >= {min_point_cur}',
+                inplace=False
+            )
+
+        ecsa_curve = find_curve_section(
+            cv_df,
+            self.pot_range[0],
+            self.pot_range[1]
+        )
+        ecsa_area = integrate_curve(
+            ecsa_curve['Cur'],
+            ecsa_curve['Pot']
+        )
+        capa_area = integrate_curve(
+            np.full(len(ecsa_curve),
+                    ecsa_curve['Cur'].min()),
+            ecsa_curve['Pot']
+        )
+        if cv_df['Cur'].iloc[0] < 0:
+            ecsa_curve['Cur'] = ecsa_curve['Cur'] * -1
+        scan_rate = float(Config.exp_params('CV_SCAN_RATE'))
+        ecsa = (ecsa_area - capa_area) / (2.1 * scan_rate * float(Config.exp_params('PT_LOADING')))
+        return float(ecsa), ecsa_curve
+
+
+class LsvAnalysis(Analysis):
+    def __init__(self, lsv_df, **kwargs):
+        super().__init__(**kwargs)
+        self.pot_range = (0.3, 0.4)
+        self.h_cross = self.find_h_cross(lsv_df)
+
+    def find_h_cross(self, lsv_df):
+        slice = lsv_df.query(f'{self.pot_range[0]} < Pot < {self.pot_range[1]}')
+        return float(slice['Cur'].mean())
 
 
 class Export:
@@ -251,8 +402,8 @@ class Export:
 
     def rename_header(self, df):
         header_dict = {
-            'Cur': 'Current [A]',
-            'Ring': 'Ring Current [A]',
+            'Cur': 'Current Density [mA/cm^2]',
+            'Ring': 'Ring Current Density [mA/cm^2]',
             'Pot': 'Potential vs. RHE [V]',
             "Z' (\u03A9)": 'Real',
             "-Z'' (\u03A9)": 'Imag'}
@@ -275,8 +426,8 @@ class Export:
 class ExportOrr(Export):
     def __init__(self, path, analysis_instance):
         super().__init__(path)
-        self.orr = self.rename_header(analysis_instance.orr)
         self.instance = analysis_instance
+        self.orr = self.rename_header(analysis_instance.orr.copy(deep=True))
 
     def parameters_to_export_str(self):
         """
@@ -294,8 +445,57 @@ class ExportOrr(Export):
         """
         writes ORR dataframes to csv and parameters as txt file to the path variable of the instance
         """
+
         self.orr.to_csv(self.path / f'{self.instance.stage}_orr.txt',
                         columns=['Potential vs. RHE [V]', 'Current [A]'],
                         index=False)
         self.str_to_file(export_str=self.parameters_to_export_str(),
                          file_name=f'{self.instance.stage}_parameters.txt')
+
+
+class ExportTestbench(Export):
+    def __init__(self, path, analysis_instances, data_instances):
+        super().__init__(path)
+        if type(data_instances) is not list: data_instances = [data_instances]
+        self.data_instances = data_instances
+        if type(analysis_instances) is not list: analysis_instances = [analysis_instances]
+        self.analysis_instances = analysis_instances
+
+    def parameters_to_export_str(self):
+        """
+        writes a pandas dataframe as .csv to a directory provided
+        :param analysis_instance: the analysis instance containing all parameters as instance variables
+        :return: string to be exported
+        """
+        export_str = 'Parameter\tValue'
+        for instance in self.analysis_instances:
+            for key, val in instance.__dict__.items():
+                if isinstance(val, float):
+                    export_str = f'{export_str}\n{key}\t{val}'
+        return export_str
+
+    def export_data(self):
+        """
+        writes ORR dataframes to csv and parameters as txt file to the path variable of the instance
+        """
+        for instance in self.data_instances:
+            export_df = instance.formatted.copy(deep=True)
+            export_df = self.rename_header(export_df)
+            export_df.to_csv(
+                self.path / f'{instance.path.name.split(".")[0]}_raw.txt',
+                columns=['Potential vs. RHE [V]', 'Current Density [mA/cm^2]'],
+                index=False
+            )
+            if instance.corrected is not None:
+                export_df = instance.corrected.copy(deep=True)
+                export_df = self.rename_header(export_df)
+                export_df.to_csv(
+                    self.path / f'{instance.path.name.split(".")[0]}_corrected.txt',
+                    columns=['Potential vs. RHE [V]', 'Current Density [mA/cm^2]'],
+                    index=False
+                )
+
+        self.str_to_file(
+            export_str=self.parameters_to_export_str(),
+            file_name=f'{self.data_instances[0].path.name.split("_")[1]}_parameters.txt'
+        )

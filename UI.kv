@@ -16,8 +16,8 @@
             on_press: root.change_screen('screen_cv')
         Button:
             font_size: 18
-            text: 'Capacitance Analysis'
-            on_press: root.change_screen('screen3')
+            text: 'Testbench analysis'
+            on_press: root.change_screen('screen_testbench')
         Button:
             font_size: 18
             text: 'Placeholder'
@@ -324,32 +324,153 @@
                 text: 'EASA [m2/g_Pt]'
 
 
-<ScreenThree>:
+<TestbenchTabContent>:
+    pos_hint: {'right':1, 'top': 0.92}
     FloatLayout:
-        FloatLayout:
+        orientation: 'vertical'
+        size_hint: 0.1, 0.1
+        pos_hint:{"top":0.97, "center_x":0.04}
+    Label:
+        text: 'Testbench analysis'
+        font_size: 65
+        color: 0,0,0,1
+        italic: True
+        size_hint: 0.2, 0.1
+        pos_hint: {'center_x':0.8, 'top': 0.98}
+    BoxLayout:
+        id: boxlayout
+        size_hint: 0.45, 0.1
+        pos_hint:{"top":1, "left":0}
+        spacing: 5
+        Button:
+            text: 'Import LSV'
+            id: import_orr_backg
+            on_press: root.add_current_data()
+            on_press: root.import_lsv()
+            bold: True
+            font_size: 18
+            background_normal:'img/general_button.png'
+        Button:
+            text: 'Import CV'
+            id: import_eis
+            on_press: root.add_current_data()
+            on_press: root.import_cv()
+            bold: True
+            font_size: 18
+            background_normal:'img/general_button.png'
+        Button:
+            text: 'Correct CV'
+            on_press: root.correct_cv()
+            bold: True
+            font_size: 18
+            background_normal:'img/general_button.png'
+        Button:
+            text: 'Analysis'
+            on_press: root.add_parameter_data()
+            on_press: root.analyse_cv()
+            on_press: root.analyse_lsv()
+            bold: True
+            font_size: 18
+            background_normal:'img/general_button.png'
+        Button:
+            text: 'Export'
+            on_press: root.export_data()
+            bold: True
+            font_size: 18
+            background_normal:'img/general_button.png'
+
+    RelativeLayout:
+        size_hint: 0.5, 0.65
+        pos_hint: {'left': 0, 'top': 0.85}
+        BoxLayout:
             orientation: 'vertical'
-            size_hint: 0.1, 0.1
-            pos_hint:{"top":0.97, "center_x":0.04}
-            Button:
-                text: 'Navigation'
-                font_color: 0,0,0,0
-                background_normal: 'img/background.png'
-                on_press: app.open_navigation()
-                size_hint: 1, 1
-                pos_hint:{"top":1, "center_x":0.5}
-            Image:
-                source: 'img/navigation_button.png'
-                y: self.parent.y
-                x: self.parent.x
-                size: 160, 160
-                allow_stretch: True
-        Label:
-            text: 'Capacitance analysis'
-            font_size: 65
-            color: 0,0,0,1
-            italic: True
+            id: plotter
+            size_hint: 1, 0.88
+            pos_hint: {"top": 1, "left": 0}
+            canvas.before:
+                Color:
+                    rgba: 0, .43, .75, 1
+                Line:
+                    width: 1.5
+                    rectangle: self.x, self.y, self.width, self.height
+        BoxLayout:
             size_hint: 0.2, 0.1
-            pos_hint: {'center_x':0.8, 'top': 0.98}
+            pos_hint: {"top": 0.1, "left": 0}
+            Button:
+                text: 'clear plot'
+                on_press: root.clear_plot()
+                bold: True
+                font_size: 18
+                background_normal:'img/general_button.png'
+        BoxLayout:
+            size_hint: 0.2, 0.1
+            pos_hint: {"top":0.1, "center_x": 0.5}
+            Spinner:
+                text: 'Plot Data'
+                id: plot_spinner
+                on_text:
+                    root.plot_from_spinner(self.text)
+                bold: True
+                font_size: 18
+                background_normal:'img/general_button.png'
+        BoxLayout:
+            size_hint: 0.2, 0.1
+            pos_hint: {"top": 0.1, "right": 1}
+            Button:
+                text: 'save as png'
+                on_press: root.safe_plot_to_png()
+                bold: True
+                font_size: 18
+                background_normal:'img/general_button.png'
+
+    BoxLayout:
+        orientation: 'vertical'
+        id: current_data
+        size_hint: 0.25, 0.2
+        pos_hint: {"top": 0.85, "center_x": 0.8}
+        canvas.before:
+            Color:
+                rgba: 0, .43, .75, 1
+            Line:
+                width: 1.5
+                rectangle: self.x, self.y, self.width, self.height
+        Label:
+            text: 'Current Data Files'
+            color: 0,0,0,1
+            font_size: 18
+            bold: True
+            size_hint: 1 , 0.2
+            halign: "center"
+        BoxLayout:
+            orientation: 'vertical'
+            id: data_labels
+
+    BoxLayout:
+        orientation: 'horizontal'
+        id: parameters
+        size_hint: 0.25, 0.2
+        pos_hint: {"top": 0.6, "center_x": 0.8}
+        canvas.before:
+            Color:
+                rgba: .5, .5, .5, 1
+            Line:
+                width: 1
+                rectangle: self.x, self.y, self.width, self.height
+        BoxLayout:
+            orientation: 'vertical'
+            id: para_value
+            Label:
+                color: 0,0,0,1
+                text: 'Value'
+                bold: True
+        BoxLayout:
+            orientation: 'vertical'
+            id: parameter
+            Label:
+                color: 0,0,0,1
+                text: 'Parameter'
+                bold: True
+
 
 <SettingsScreen>:
     FloatLayout:
@@ -415,9 +536,9 @@
             on_press: root.manager.current= 'screen_cv'
         Button:
             font_size: 18
-            text: 'Capacitance Analysis'
+            text: 'Testbench analysis'
             on_press: root.dismiss()
-            on_press: root.manager.current= 'screen3'
+            on_press: root.manager.current= 'screen_testbench'
         Button:
             font_size: 18
             text: 'Placeholder'
@@ -453,9 +574,9 @@
         name: 'screen_cv'
         manager: screen_manager
 
-    ScreenThree:
+    ScreenOne:
         id: screen_three
-        name: 'screen3'
+        name: 'screen_testbench'
         manager: screen_manager
 
     SettingsScreen:

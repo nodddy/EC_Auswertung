@@ -12,23 +12,38 @@ import pandas as pd
 import tkfilebrowser
 import matplotlib.pyplot as plt
 from pathlib import Path
+import os
 
 import DataHandler
 import CustomWidgets as CW
 
 
 class Plotter:
-    plot_dict = {'orr': {'x_label': 'Pot vs. RHE [V]',
-                         'y_label': 'Disk Current [mA]'},
+    plot_dict = {
+        'orr': {
+            'x_label': 'Pot vs. RHE [V]',
+            'y_label': 'Disk Current [mA]'
+        },
 
-                 'eis': {'x_label': "Real Z' (\u03A9)",
-                         'y_label': "Imaginary -Z'' (\u03A9)"},
+        'eis': {
+            'x_label': "Real Z' (\u03A9)",
+            'y_label': "Imaginary -Z'' (\u03A9)"
+        },
 
-                 'orr_analysis': {'x_label': 'Pot vs. RHE [V]',
-                                  'y_label': 'Disk Current Density [mA/cm2]'},
+        'orr_analysis': {
+            'x_label': 'Pot vs. RHE [V]',
+            'y_label': 'Disk Current Density [mA/cm2]'
+        },
 
-                 'cv': {'y_label': 'Current Density [mA/cm2]',
-                        'x_label': 'Potential vs. RHE [V]'}}
+        'cv': {
+            'y_label': 'Current Density [mA/cm2]',
+            'x_label': 'Potential vs. RHE [V]'
+        },
+        'lsv': {
+            'y_label': 'Current Density [mA/cm2]',
+            'x_label': 'Potential vs. RHE [V]'
+        }
+    }
 
     def __init__(self):
         pass
@@ -73,6 +88,12 @@ class Plotter:
             ax_widget.scatter(item['Pot'], item['Cur'])
         return fig_widget.draw()
 
+    def plot_ecsa(self, fig_widget, ax_widget, ecsa_curve):
+        if type(ecsa_curve) is not list: ecsa_curve = [ecsa_curve]
+        for item in ecsa_curve:
+            ax_widget.fill(item['Pot'], item['Cur'])
+        return fig_widget.draw()
+
 
 class ScreenZero(Screen):
     """
@@ -97,7 +118,8 @@ class ScreenOne(Screen):
         if self.tab_manager is None:
             instance_dict = {
                 'screen_orr': 'OrrTabContent',
-                'screen_cv': 'CvTabContent'
+                'screen_cv': 'CvTabContent',
+                'screen_testbench': 'TestbenchTabContent'
             }
             self.tab_manager = CW.TabManager(
                 content_cls=eval(instance_dict[self.name]),
@@ -105,6 +127,30 @@ class ScreenOne(Screen):
                 size_hint=(0.92, 1)
             )
             self.children[0].add_widget(self.tab_manager)
+
+    @staticmethod
+    def import_data(instance, data_var: str, data_class: str, skip_row: int = 0, delimiter='\t'):
+        """ imports ORR, saves as instance variable and plots it """
+        path = Path(
+            tkfilebrowser.askopenfilename(filetypes=[("Textfile", ".txt"), ('Textfile', ".csv")],
+                                          initialdir='C:/Users/Marius/Documents/GitHub/EC_Auswertung/Daten'))
+        if str(path) == '.':
+            return
+        try:
+            setattr(
+                instance,
+                data_var,
+                eval(f'DataHandler.{data_class}')(
+                    path=path,
+                    raw_data=pd.read_csv(
+                        path,
+                        sep=delimiter,
+                        skiprows=skip_row
+                    )
+                ))
+        except pd.core.computation.ops.UndefinedVariableError:
+            return
+        return
 
 
 class OrrTabContent(CW.TabContent):
@@ -128,42 +174,27 @@ class OrrTabContent(CW.TabContent):
 
     def import_orr(self):
         """ imports ORR, saves as instance variable and plots it """
-        orr_path = Path(
-            tkfilebrowser.askopenfilename(filetypes=[("Textfile", "*.txt")],
-                                          initialdir='C:/Users/Marius/Documents/GitHub/EC_Auswertung/Daten'))
-        if str(orr_path) == '.':
-            return
-        try:
-            self.current_orr = DataHandler.Orr(path=orr_path,
-                                               raw_data=pd.read_csv(orr_path, sep='\t'))
-        except pd.core.computation.ops.UndefinedVariableError:
-            return
-        self.current_plot = plotter.plot(self, 'orr', label='Raw ORR',
-                                         x_data=self.current_orr.formatted['Pot'],
-                                         y_data=self.current_orr.formatted['Cur'])[0]
+        ScreenOne.import_data(self, 'current_orr', 'Orr')
+        self.current_plot = plotter.plot(
+            self,
+            'orr',
+            label='Raw ORR',
+            x_data=self.current_orr.formatted['Pot'],
+            y_data=self.current_orr.formatted['Cur']
+        )[0]
         active_screen = manager.get_screen(manager.current)
-        active_screen.tab_manager.rename_current_instance(new_name=self.current_orr.path.name.split('.')[0])
+        active_screen.tab_manager.rename_current_instance(
+            new_name=self.current_orr.path.name.split('.')[0]
+        )
         return
 
     def import_orr_bckg(self):
         """ imports ORR and saves as background instance variable """
-        orr_bckg_path = Path(
-            tkfilebrowser.askopenfilename(filetypes=[("Textfile", "*.txt")],
-                                          initialdir='C:/Users/Marius/Documents/GitHub/EC_Auswertung/Daten'))
-        if str(orr_bckg_path) == '.':
-            return
-        self.current_orr_bckg = DataHandler.OrrBckg(path=orr_bckg_path,
-                                                    raw_data=pd.read_csv(orr_bckg_path, sep='\t'))
+        ScreenOne.import_data(self, 'current_orr_bckg', 'OrrBckg')
 
     def import_eis(self):
         """ imports EIS data and saves it as instance variable """
-        eis_path = Path(
-            tkfilebrowser.askopenfilename(filetypes=[("Textfile", "*.txt")],
-                                          initialdir='C:/Users/Marius/Documents/GitHub/EC_Auswertung/Daten'))
-        if str(eis_path) == '.':
-            return
-        self.current_eis = DataHandler.Eis(path=eis_path,
-                                           raw_data=pd.read_csv(eis_path, sep='\t'))
+        ScreenOne.import_data(self, 'current_eis', 'Eis')
 
     def correct_orr(self):
         """ corrects the current ORR analysis and plots the corrected ORR curve """
@@ -251,10 +282,178 @@ class CvTabContent(CW.TabContent):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.current_plot = None
+        self.current_cv = None
+
+    def import_cv(self):
+        ScreenOne.import_data(self, 'current_cv', 'Cv')
 
 
-class ScreenThree(Screen):
-    pass
+class TestbenchTabContent(CW.TabContent):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.current_plot = None
+        self.message_list = []
+        self.current_eis_dict = None
+        self.current_cv = None
+        self.current_lsv = None
+        self.current_cv_analysis = None
+        self.current_lsv_analysis = None
+        self.current_export = None
+        self.parameter_dict = {
+            'ecsa': 'EASA [m^2/g_Pt]',
+            'h_cross': 'H2 Cross-over [mA/cm^2]'
+        }
+
+    def import_lsv(self):
+        """ imports LSV and saves as background instance variable """
+        ScreenOne.import_data(self, 'current_lsv', 'Lsv', 3, ',')
+        self.current_plot = plotter.plot(
+            self,
+            'lsv',
+            label=[
+                'Raw LSV',
+                'Corrected LSV'
+            ],
+            x_data=[
+                self.current_lsv.formatted['Pot'],
+                self.current_lsv.corrected['Pot']
+            ],
+            y_data=[
+                self.current_lsv.formatted['Cur'],
+                self.current_lsv.corrected['Cur']
+            ],
+        )[0]
+        return
+
+    def import_cv(self):
+        """ imports CV and saves it as instance variable """
+        ScreenOne.import_data(self, 'current_cv', 'CvTestbench', 3, ',')
+        self.current_plot = plotter.plot(
+            self,
+            'cv',
+            label='Raw CV',
+            x_data=self.current_cv.formatted['Pot'],
+            y_data=self.current_cv.formatted['Cur']
+        )[0]
+        return
+
+    def correct_cv(self):
+        """ corrects the current CV and plots the corrected curve """
+        if self.current_cv is None or self.current_lsv is None:
+            return
+        self.current_cv.correct(
+            self.current_lsv.res_slope,
+            self.current_lsv.res_intercept
+        )
+        self.current_plot = plotter.plot(
+            self,
+            'cv',
+            label=[
+                'Corrected CV',
+                'Raw CV'
+            ],
+            x_data=[
+                self.current_cv.corrected['Pot'],
+                self.current_cv.formatted['Pot']
+            ],
+            y_data=[
+                self.current_cv.corrected['Cur'],
+                self.current_cv.formatted['Cur']
+            ]
+        )[0]
+
+    def analyse_cv(self):
+        if self.current_cv is None:
+            return
+        elif self.current_cv.corrected is None:
+            cv_df = self.current_cv.formatted
+        else:
+            cv_df = self.current_cv.corrected
+
+        self.current_cv_analysis = DataHandler.CvAnalysis(cv_df)
+        self.current_plot, axes_widget = plotter.plot(
+            self,
+            'cv',
+            label='CV',
+            x_data=cv_df['Pot'],
+            y_data=cv_df['Cur']
+        )
+        plotter.plot_ecsa(
+            self.current_plot,
+            axes_widget,
+            self.current_cv_analysis.ecsa_curve
+        )
+
+    def analyse_lsv(self):
+        if self.current_lsv is None:
+            return
+        elif self.current_lsv.corrected is None:
+            lsv_df = self.current_lsv.formatted
+        else:
+            lsv_df = self.current_lsv.corrected
+
+        self.current_lsv_analysis = DataHandler.LsvAnalysis(lsv_df)
+        self.current_plot, axes_widget = plotter.plot(
+            self,
+            'lsv',
+            label='LSV',
+            x_data=lsv_df['Pot'],
+            y_data=lsv_df['Cur']
+        )
+
+    def export_data(self):
+        """ asks for export directory and creates export instances for anodic and cathodic scans """
+        if self.current_cv is None and self.current_lsv is None:
+            return
+        export_dir = tkfilebrowser.askopendirname()
+        data_instances = [inst for inst in [self.current_lsv, self.current_cv] if inst is not None]
+        analysis_instances = [inst for inst in [self.current_lsv_analysis, self.current_cv_analysis] if
+                              inst is not None]
+        export = DataHandler.ExportTestbench(
+            path=export_dir,
+            analysis_instances=analysis_instances,
+            data_instances=data_instances
+        )
+        export.export_data()
+
+    def add_current_data(self):
+        label_list = [f'{data.name}:  {data.path.name}' for data in
+                      [self.current_cv, self.current_lsv] if data is not None]
+        self.add_labels(self.ids['data_labels'], label_list)
+        return
+
+    def add_parameter_data(self):
+        label_list = []
+        for instance in [self.current_cv_analysis, self.current_lsv_analysis]:
+            if instance is not None:
+                label_list.extend(
+                    [str(round(abs(val), 3)) for val in instance.__dict__.values() if isinstance(val, float)])
+        self.add_labels(self.ids['para_value'], label_list)
+        label_list = []
+        for instance in [self.current_cv_analysis, self.current_lsv_analysis]:
+            if instance is not None:
+                label_list.extend(
+                    [self.parameter_dict[key] for key, val in instance.__dict__.items() if isinstance(val, float)])
+        self.add_labels(self.ids['parameter'], label_list)
+
+    def add_labels(self, label_box, label_list):
+        label_box.clear_widgets()
+        for text in label_list:
+            label_box.add_widget(Label(
+                text=text,
+                color=(0, 0, 0, 1),
+                font_size=14))
+
+    def clear_plot(self):
+        self.ids['plotter'].clear_widgets()
+        self.current_plot = None
+
+    def safe_plot_to_png(self):
+        if self.current_plot is None:
+            return
+        else:
+            self.current_plot.print_png(
+                f'{self.current_orr.path.parents[0] / self.current_orr.path.name.split(".")[0]}.png')
 
 
 class SettingsScreen(Screen):
