@@ -20,6 +20,7 @@ class TabManager(RelativeLayout):
         )
         tab_bar_box.add_widget(ImageButton(
             img='img/add_button.png',
+            id='add_btn',
             size_hint=(0.6, 0.6),
             pos_hint={'center_x': 0.5, 'center_y': 0.5},
             on_press=self.add_instance
@@ -65,11 +66,13 @@ class TabManager(RelativeLayout):
         """
         if instance.id == self.current_instance:
             return
+
         self.instances[self.current_instance].toggle_instance_widget()
-        self.instances[instance.id].toggle_instance_widget()
+        self.instances[self.current_instance].leave_instance()
         self.current_instance = instance.id
-        self.instances[instance.id].on_tab_activation()
         self.build_instance_buttons()
+        self.instances[instance.id].toggle_instance_widget()
+        self.instances[instance.id].on_tab_activation()
 
     def rename_current_instance(self, new_name):
         """
@@ -105,6 +108,7 @@ class TabContent(RelativeLayout):
         if self.current_plot is not None:
             self.ids['plotter'].clear_widgets()
             self.ids['plotter'].add_widget(self.current_plot)
+        self.open_instance()
 
     def toggle_instance_widget(self):
         """
@@ -114,6 +118,12 @@ class TabContent(RelativeLayout):
             self.pos_hint = {'right': -1, 'top': 0.92}
         else:
             self.pos_hint = {'right': 1, 'top': 0.92}
+
+    def open_instance(self):
+        pass
+
+    def leave_instance(self):
+        pass
 
 
 class ImageButton(ButtonBehavior, Image):

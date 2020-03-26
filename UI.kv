@@ -472,43 +472,29 @@
                 bold: True
 
 
-<SettingsScreen>:
+<SettingsTabContent>:
     FloatLayout:
-        FloatLayout:
-            orientation: 'vertical'
-            size_hint: 0.1, 0.1
-            pos_hint: {"top": 0.97, "center_x": 0.04}
-            Button:
-                text: 'Navigation'
-                font_color: 0,0,0,0
-                background_normal: 'img/background.png'
-                on_press: app.open_navigation()
-                size_hint: 1, 1
-                pos_hint: {"top":1, "center_x":0.5}
-            Image:
-                source: 'img/navigation_button.png'
-                y: self.parent.y
-                x: self.parent.x
-                size: 160, 160
-                allow_stretch: True
-        Label:
-            text: 'Settings'
-            font_size: 65
-            color: 0,0,0,1
-            italic: True
-            size_hint: 0.2, 0.1
-            pos_hint: {'center_x':0.8, 'top': 0.98}
-        BoxLayout:
-            id: box_settings
-            size_hint: 0.8 , 0.4
-            pos_hint: {'top': 0.8, 'center_x': 0.5}
-            orientation: 'horizontal'
-            canvas.before:
-                Color:
-                    rgba: .5, .5, .5, 1
-                Line:
-                    width: 1
-                    rectangle: self.x, self.y, self.width, self.height
+        orientation: 'vertical'
+        size_hint: 0.1, 0.1
+        pos_hint: {"top": 0.97, "center_x": 0.04}
+    Label:
+        text: 'Settings'
+        font_size: 65
+        color: 0,0,0,1
+        italic: True
+        size_hint: 0.2, 0.1
+        pos_hint: {'center_x':0.8, 'top': 0.98}
+    BoxLayout:
+        id: box_settings
+        size_hint: 0.5 , 0.5
+        pos_hint: {'top': 0.8, 'center_x': 0.5}
+        orientation: 'horizontal'
+        canvas.before:
+            Color:
+                rgba: 0, .43, .75, 1
+            Line:
+                width: 1.5
+                rectangle: self.x, self.y, self.width, self.height
 
 
 <Navigation>: #popup class
@@ -579,7 +565,7 @@
         name: 'screen_testbench'
         manager: screen_manager
 
-    SettingsScreen:
+    ScreenOne:
         id: settings_screen
         name: 'settings'
         manager: screen_manager

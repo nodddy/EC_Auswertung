@@ -118,7 +118,8 @@ class ScreenOne(Screen):
             instance_dict = {
                 'screen_orr': 'OrrTabContent',
                 'screen_cv': 'CvTabContent',
-                'screen_testbench': 'TestbenchTabContent'
+                'screen_testbench': 'TestbenchTabContent',
+                'settings': 'SettingsTabContent'
             }
             self.tab_manager = CW.TabManager(
                 content_cls=eval(instance_dict[self.name]),
@@ -126,6 +127,8 @@ class ScreenOne(Screen):
                 size_hint=(0.92, 1)
             )
             self.children[0].add_widget(self.tab_manager)
+            if self.name == 'settings':
+                self.on_settings_opening()
 
     @staticmethod
     def import_data(instance, data_var: str, data_class: str, skip_row: int = 0, delimiter='\t'):
@@ -152,6 +155,17 @@ class ScreenOne(Screen):
         except pd.core.computation.ops.UndefinedVariableError:
             return False
         return True
+
+    def on_settings_opening(self):
+        if len(self.tab_manager.instances) != len(config.sections()):
+            for _ in range(len(config.sections()) - 1):
+                self.tab_manager.add_instance()
+            for (new_name, inst_key) in zip(config.sections(), list(self.tab_manager.instances.keys())):
+                if self.tab_manager.current_instance == inst_key:
+                    self.tab_manager.current_instance = new_name
+                self.tab_manager.instances[new_name] = self.tab_manager.instances.pop(inst_key)
+            self.tab_manager.build_instance_buttons()
+            self.tab_manager.tab_box.remove_widget(self.tab_manager.tab_box.children[0])
 
 
 class OrrTabContent(CW.TabContent):
@@ -463,47 +477,60 @@ class TestbenchTabContent(CW.TabContent):
                 f'{self.current_orr.path.parents[0] / self.current_orr.path.name.split(".")[0]}.png')
 
 
-class SettingsScreen(Screen):
+class SettingsTabContent(CW.TabContent):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.current_edit = None
+        self.current_plot = None
 
-    def on_enter(self, *args):
+    def open_instance(self, *args):
         """
         calls the update from config file on each enter on the screen
         """
         self.update_settings_from_config()
+        self.parent.tab_box.remove_widget(self.parent.tab_box.children[0])
 
     def update_settings_from_config(self):
         """
         reads the config file and adds new widgets for each header and their individual configs with values.
         """
+
+        def get_unit(key):
+            unit_dict = {
+                'electrode_area': 'cm^2',
+                'j_kin_potential': 'V',
+                'rrde_n': '%',
+                'pt_loading': 'g/cm^2',
+                'cv_scan_rate': 'mV/s',
+                'cv_format_time_limit': 's'
+            }
+            if key in unit_dict.keys():
+                return f'[{unit_dict[key]}]'
+            else:
+                return ''
+
         self.ids['box_settings'].clear_widgets()
         height_hint = 1 / (1 + max([len(config._sections[key]) for key in config._sections]))
-        for key in config._sections:
-            box = BoxLayout(orientation='vertical',
-                            size_hint_y=(1 + len(config._sections[key])) * height_hint,
-                            pos_hint={'top': 1})
-            box.add_widget(Label(text=str(key),
-                                 color=(0, 0, 0, 1),
-                                 font_size=14,
-                                 bold=True))
-            for setting, val in config._sections[key].items():
-                inner_box = BoxLayout(orientation='horizontal')
-                inner_box.add_widget(Label(text=str(setting),
-                                           color=(0, 0, 0, 1),
-                                           font_size=14))
-                inner_box.add_widget(Label(text=str(val),
-                                           color=(0, 0, 0, 1),
-                                           font_size=14,
-                                           size_hint=(0.5, 0.6),
-                                           pos_hint={'center_y': 0.5}))
-                inner_box.add_widget(CW.ImageButton(img='img/edit_button.png',
-                                                    on_press=self.edit_setting,
-                                                    size_hint=(0.6, 0.6),
-                                                    pos_hint={'center_x': 0.5, 'center_y': 0.5}))
-                box.add_widget(inner_box)
-            self.ids['box_settings'].add_widget(box)
+        key = self.parent.current_instance
+        box = BoxLayout(orientation='vertical',
+                        size_hint_y=(1 + len(config._sections[key])) * height_hint,
+                        pos_hint={'top': 1})
+        for setting, val in config._sections[key].items():
+            inner_box = BoxLayout(orientation='horizontal')
+            inner_box.add_widget(Label(text=f'{str(setting)} {get_unit(str(setting))}',
+                                       color=(0, 0, 0, 1),
+                                       font_size=14))
+            inner_box.add_widget(Label(text=str(val),
+                                       color=(0, 0, 0, 1),
+                                       font_size=14,
+                                       size_hint=(0.5, 0.6),
+                                       pos_hint={'center_y': 0.5}))
+            inner_box.add_widget(CW.ImageButton(img='img/edit_button.png',
+                                                on_press=self.edit_setting,
+                                                size_hint=(0.6, 0.6),
+                                                pos_hint={'center_x': 0.5, 'center_y': 0.5}))
+            box.add_widget(inner_box)
+        self.ids['box_settings'].add_widget(box)
 
     def edit_setting(self, btn):
         """
@@ -537,8 +564,9 @@ class SettingsScreen(Screen):
         Afterwards resets the current edit and renews all setting widgets from the new config file
          """
         box = btn.parent
-        key = [widget for widget in box.parent.children if isinstance(widget, Label)][0].text
-        config._sections[key][box.children[2].text] = box.children[1].text
+        section_key = self.parent.current_instance
+        key = [widget for widget in box.children if isinstance(widget, Label)][0].text
+        config._sections[section_key][box.children[2].text] = box.children[1].text
         with open('config.ini', 'w') as configfile:
             config.write(configfile)
         self.current_edit = None
