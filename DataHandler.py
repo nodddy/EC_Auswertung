@@ -230,7 +230,8 @@ class CvTestbench(Data):
             f'Pot == {min_pot}',
             inplace=False
         )
-        half_scan_duration = (max_pot_df['Time'].values - min_pot_df['Time'].values).min() + 0.1
+        half_scan_duration = np.subtract(max_pot_df['Time'].to_numpy().reshape(-1, 1),
+                                         min_pot_df['Time'].to_numpy().reshape(1, -1)).min() + 0.1
         last_time_val = raw_cv['Time'].iloc[raw_cv['Time'].last_valid_index()]
         scan_number = round(last_time_val / (half_scan_duration * 2), 0) - float(Config.exp_params('CV_SCAN_USED'))
         lower_time_limit = (last_time_val - ((half_scan_duration * 2) * (scan_number + 1)))
