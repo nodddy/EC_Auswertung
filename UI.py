@@ -131,10 +131,12 @@ class ScreenOne(Screen):
     def import_data(instance, data_var: str, data_class: str, skip_row: int = 0, delimiter='\t'):
         """ imports ORR, saves as instance variable and plots it """
         path = Path(
-            tkfilebrowser.askopenfilename(filetypes=[("Textfile", ".txt"), ('Textfile', ".csv")],
-                                          initialdir='C:/Users/Marius/Documents/GitHub/EC_Auswertung/Daten'))
-        if str(path) == '.':
-            return
+            tkfilebrowser.askopenfilename(
+                filetypes=[("Textfile", ".txt"), ('Textfile', ".csv")],
+                initialdir='C:/Users/Marius/Documents/GitHub/EC_Auswertung/Daten')
+        )
+        if str(path) == '.' or str(path) == '':
+            return False
         try:
             setattr(
                 instance,
@@ -148,8 +150,8 @@ class ScreenOne(Screen):
                     )
                 ))
         except pd.core.computation.ops.UndefinedVariableError:
-            return
-        return
+            return False
+        return True
 
 
 class OrrTabContent(CW.TabContent):
@@ -173,7 +175,8 @@ class OrrTabContent(CW.TabContent):
 
     def import_orr(self):
         """ imports ORR, saves as instance variable and plots it """
-        ScreenOne.import_data(self, 'current_orr', 'Orr')
+        if ScreenOne.import_data(self, 'current_orr', 'Orr') is False:
+            return
         self.current_plot = plotter.plot(
             self,
             'orr',
@@ -189,11 +192,13 @@ class OrrTabContent(CW.TabContent):
 
     def import_orr_bckg(self):
         """ imports ORR and saves as background instance variable """
-        ScreenOne.import_data(self, 'current_orr_bckg', 'OrrBckg')
+        if ScreenOne.import_data(self, 'current_orr_bckg', 'OrrBckg') is False:
+            return
 
     def import_eis(self):
         """ imports EIS data and saves it as instance variable """
-        ScreenOne.import_data(self, 'current_eis', 'Eis')
+        if ScreenOne.import_data(self, 'current_eis', 'Eis') is False:
+            return
 
     def correct_orr(self):
         """ corrects the current ORR analysis and plots the corrected ORR curve """
@@ -284,7 +289,8 @@ class CvTabContent(CW.TabContent):
         self.current_cv = None
 
     def import_cv(self):
-        ScreenOne.import_data(self, 'current_cv', 'Cv')
+        if ScreenOne.import_data(self, 'current_cv', 'Cv') is False:
+            return
 
 
 class TestbenchTabContent(CW.TabContent):
@@ -305,7 +311,8 @@ class TestbenchTabContent(CW.TabContent):
 
     def import_lsv(self):
         """ imports LSV and saves as background instance variable """
-        ScreenOne.import_data(self, 'current_lsv', 'Lsv', 3, ',')
+        if ScreenOne.import_data(self, 'current_lsv', 'Lsv', 3, ',') is False:
+            return
         self.current_plot = plotter.plot(
             self,
             'lsv',
@@ -326,7 +333,8 @@ class TestbenchTabContent(CW.TabContent):
 
     def import_cv(self):
         """ imports CV and saves it as instance variable """
-        ScreenOne.import_data(self, 'current_cv', 'CvTestbench', 3, ',')
+        if ScreenOne.import_data(self, 'current_cv', 'CvTestbench', 3, ',') is False:
+            return
         self.current_plot = plotter.plot(
             self,
             'cv',
