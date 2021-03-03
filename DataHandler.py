@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 from scipy import integrate
 from sklearn.linear_model import LinearRegression
+from unidecode import unidecode
 
 
 class Config:
@@ -61,8 +62,10 @@ class Data:
             str(Config.header('TESTBENCH_CURRENT_HEADER')): 'Cur',
             str(Config.header('TESTBENCH_TIME_HEADER')): 'Time',
             str(Config.header('TESTBENCH_EIS_REAL_HEADER')): 'Real',
-            str(Config.header('TESTBENCH_EIS_IMAG_HEADER')): 'Imag'
+            str(Config.header('POROSITY_APPL.PRESSURE_HEADER')): 'ApplPressure',
+            str(Config.header('POROSITY_INTR.VOLUME_HEADER')): 'IntrVolume'
         }
+        raw_data.rename(columns=lambda x: unidecode(x), inplace=True)
         raw_data.rename(columns=lambda x: x.replace(' ', ''), inplace=True)
         header_dict = {k.replace(' ', ''): v for (k, v) in header_dict.items()}
         return raw_data.rename(columns=header_dict)
@@ -257,6 +260,35 @@ class CvTestbench(Data):
                 + intercept
         )
         self.corrected = corrected_cv
+
+
+class Porosity(Data):
+    def __init__(self, raw_data, path):
+        super().__init__(raw_data, path)
+        self.name = 'Porosity'
+
+    def data_from_file(file_path: str):
+
+        """
+        opens file from path and iterated through to search for parameter results and Experimental Data.
+        Paramters are packed into dict as strings and data is packed into pandas dataframe, which get returned.
+        """
+
+        with open(file_path, 'r') as f:
+            file_lines = f.read().splitlines()
+        first_index = None
+        last_index = None
+        for index, line in enumerate(file_lines):
+            if 'RESULTS WITHOUT COMPRESSIB. CORR.' in line:
+                first_index = index
+            if first_index is not None and '' == line:
+                last_index = index
+                break
+        dict_list = {}
+        for item in [item.replace(' ', '').split(';') for item in file_lines[first_index + 1:last_index]]:
+            i = iter(item)
+            dict_list.update(dict(zip(i, i)))
+        return dict_list
 
 
 class Analysis:

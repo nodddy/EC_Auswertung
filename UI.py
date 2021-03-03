@@ -41,6 +41,10 @@ class Plotter:
         'lsv': {
             'y_label': 'Current Density [mA/cm2]',
             'x_label': 'Potential vs. RHE [V]'
+        },
+        'porosity': {
+            'y_label': 'Applied Pressure [MPa]',
+            'x_label': 'Intruded Pore Volume [mm3/g]'
         }
     }
 
@@ -119,6 +123,7 @@ class ScreenOne(Screen):
                 'screen_orr': 'OrrTabContent',
                 'screen_cv': 'CvTabContent',
                 'screen_testbench': 'TestbenchTabContent',
+                'screen_porosimetry': 'PorosimetryTabContent',
                 'settings': 'SettingsTabContent'
             }
             self.tab_manager = CW.TabManager(
@@ -131,13 +136,15 @@ class ScreenOne(Screen):
                 self.on_settings_opening()
 
     @staticmethod
-    def import_data(instance, data_var: str, data_class: str, skip_row: int = 0, delimiter='\t'):
-        """ imports ORR, saves as instance variable and plots it """
-        path = Path(
-            tkfilebrowser.askopenfilename(
-                filetypes=[("Textfile", ".txt"), ('Textfile', ".csv")],
-                initialdir='C:/Users/Marius/Documents/GitHub/EC_Auswertung/Daten')
-        )
+    def import_data(instance, data_var: str, data_class: str, skip_row: int = 0, decimal: str = '.',
+                    delimiter: str = '\t', path: str = ''):
+        """ imports data, saves as instance variable and plots it """
+        if path == '':
+            path = Path(
+                tkfilebrowser.askopenfilename(
+                    # filetypes=[("Textfile", ".txt"), ('Textfile', ".csv")],
+                    initialdir='C:/Users/Marius/Documents/GitHub/EC_Auswertung/Daten')
+            )
         if str(path) == '.' or str(path) == '':
             return False
         try:
@@ -149,7 +156,8 @@ class ScreenOne(Screen):
                     raw_data=pd.read_csv(
                         path,
                         sep=delimiter,
-                        skiprows=skip_row
+                        skiprows=skip_row,
+                        decimal=decimal
                     )
                 ))
         except pd.core.computation.ops.UndefinedVariableError:
@@ -475,6 +483,56 @@ class TestbenchTabContent(CW.TabContent):
         else:
             self.current_plot.print_png(
                 f'{self.current_orr.path.parents[0] / self.current_orr.path.name.split(".")[0]}.png')
+
+
+class PorosimetryTabContent(CW.TabContent):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.current_edit = None
+        self.current_plot = None
+        self.current_porosity = None
+        self.current_background = None
+
+    def import_porosity(self):
+        """ imports porosity data, saves as instance variable and plots it """
+        file_path = Path(
+            tkfilebrowser.askopenfilename(
+                initialdir='H:/Doktorarbeit/Daten/Porosimetry')
+        )
+        with open(file_path, 'r') as f:
+            for index, line in enumerate(f.read().splitlines()):
+                if 'EXPERIMENTAL DATA' in line:
+                    row_skip = index + 1
+
+        if ScreenOne.import_data(self, 'current_porosity', 'Porosity', decimal=',', delimiter=';', skip_row=row_skip,
+                                 path=file_path) is False:
+            return
+        self.current_plot = plotter.plot(
+            self,
+            'porosity',
+            label='Raw Porosity',
+            x_data=self.current_porosity.raw['ApplPressure'],
+            y_data=self.current_porosity.raw['IntrVolume']
+        )[0]
+        active_screen = manager.get_screen(manager.current)
+        active_screen.tab_manager.rename_current_instance(
+            new_name=self.current_porosity.path.name.split('.')[0]
+        )
+        return
+
+    def add_current_data(self):
+        label_list = [f'{data.name}:  {data.path.name}' for data in
+                      [self.current_porosity, self.current_background] if data is not None]
+        self.add_labels(self.ids['data_labels'], label_list)
+        return
+
+    def add_labels(self, label_box, label_list):
+        label_box.clear_widgets()
+        for text in label_list:
+            label_box.add_widget(Label(
+                text=text,
+                color=(0, 0, 0, 1),
+                font_size=14))
 
 
 class SettingsTabContent(CW.TabContent):
