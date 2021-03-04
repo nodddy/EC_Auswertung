@@ -3,6 +3,7 @@ from kivy.uix.image import Image
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.button import Button
+from kivy.uix.label import Label
 
 
 class TabManager(RelativeLayout):
@@ -104,6 +105,10 @@ class TabManager(RelativeLayout):
 
 
 class TabContent(RelativeLayout):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        pass
+
     def on_tab_activation(self):
         if self.current_plot is not None:
             self.ids['plotter'].clear_widgets()
@@ -124,6 +129,31 @@ class TabContent(RelativeLayout):
 
     def leave_instance(self):
         pass
+
+
+class DataContent(TabContent):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        pass
+
+    def add_labels(self, label_box, label_list):
+        label_box.clear_widgets()
+        for text in label_list:
+            label_box.add_widget(Label(
+                text=text,
+                color=(0, 0, 0, 1),
+                font_size=14))
+
+    def clear_plot(self):
+        self.ids['plotter'].clear_widgets()
+        self.current_plot = None
+
+    def safe_plot_to_png(self):
+        if self.current_plot is None:
+            return
+        else:
+            self.current_plot.print_png(
+                f'{self.current_main_data.path.parents[0] / self.current_main_data.path.name.split(".")[0]}.png')
 
 
 class ImageButton(ButtonBehavior, Image):

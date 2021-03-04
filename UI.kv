@@ -492,17 +492,17 @@
         spacing: 5
         Button:
             text: 'Import Data'
-            id: import_orr_backg
+            id: import_porosity
             on_press: root.add_current_data()
             on_press: root.import_porosity()
             bold: True
             font_size: 18
             background_normal:'img/general_button.png'
         Button:
-            text: 'Import Background Data'
-            id: import_eis
+            text: 'Import Background'
+            id: import_porosity_background
             on_press: root.add_current_data()
-            on_press: root.import_cv()
+            on_press: root.import_background()
             bold: True
             font_size: 18
             background_normal:'img/general_button.png'

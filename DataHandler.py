@@ -266,29 +266,28 @@ class Porosity(Data):
     def __init__(self, raw_data, path):
         super().__init__(raw_data, path)
         self.name = 'Porosity'
+        self.parameter_dict = self.parameters_from_file()
 
-    def data_from_file(file_path: str):
-
+    def parameters_from_file(self):
         """
         opens file from path and iterated through to search for parameter results and Experimental Data.
-        Paramters are packed into dict as strings and data is packed into pandas dataframe, which get returned.
+        Parameters are packed into dict as strings and data is packed into pandas dataframe, which get returned.
         """
-
-        with open(file_path, 'r') as f:
+        with open(self.path, 'r') as f:
             file_lines = f.read().splitlines()
         first_index = None
         last_index = None
+        param_dict = {}
         for index, line in enumerate(file_lines):
             if 'RESULTS WITHOUT COMPRESSIB. CORR.' in line:
                 first_index = index
             if first_index is not None and '' == line:
                 last_index = index
                 break
-        dict_list = {}
         for item in [item.replace(' ', '').split(';') for item in file_lines[first_index + 1:last_index]]:
             i = iter(item)
-            dict_list.update(dict(zip(i, i)))
-        return dict_list
+            param_dict.update(dict(zip(i, i)))
+        return param_dict
 
 
 class Analysis:

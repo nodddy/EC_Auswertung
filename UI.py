@@ -176,14 +176,14 @@ class ScreenOne(Screen):
             self.tab_manager.tab_box.remove_widget(self.tab_manager.tab_box.children[0])
 
 
-class OrrTabContent(CW.TabContent):
+class OrrTabContent(CW.DataContent):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.current_plot = None
         self.message_list = []
-        self.current_orr = None
-        self.current_orr_bckg = None
+        self.current_main_data = None
+        self.current_background = None
         self.current_eis = None
         self.current_ano_analysis = None
         self.current_cat_analysis = None
@@ -195,26 +195,32 @@ class OrrTabContent(CW.TabContent):
                                'peroxide_yield': 'Peroxide Yield [%]',
                                'e_transfer': 'Electron Transfer Number'}
 
+    def add_current_data(self):
+        label_list = [f'{data.path.name}' for data in
+                      [self.current_main_data, self.current_background, self.current_eis] if data is not None]
+        self.add_labels(self.ids['data_labels'], label_list)
+        return
+
     def import_orr(self):
         """ imports ORR, saves as instance variable and plots it """
-        if ScreenOne.import_data(self, 'current_orr', 'Orr') is False:
+        if ScreenOne.import_data(self, 'current_main_data', 'Orr') is False:
             return
         self.current_plot = plotter.plot(
             self,
             'orr',
             label='Raw ORR',
-            x_data=self.current_orr.formatted['Pot'],
-            y_data=self.current_orr.formatted['Cur']
+            x_data=self.current_main_data.formatted['Pot'],
+            y_data=self.current_main_data.formatted['Cur']
         )[0]
         active_screen = manager.get_screen(manager.current)
         active_screen.tab_manager.rename_current_instance(
-            new_name=self.current_orr.path.name.split('.')[0]
+            new_name=self.current_main_data.path.name.split('.')[0]
         )
         return
 
     def import_orr_bckg(self):
         """ imports ORR and saves as background instance variable """
-        if ScreenOne.import_data(self, 'current_orr_bckg', 'OrrBckg') is False:
+        if ScreenOne.import_data(self, 'current_background', 'OrrBckg') is False:
             return
 
     def import_eis(self):
@@ -224,31 +230,31 @@ class OrrTabContent(CW.TabContent):
 
     def correct_orr(self):
         """ corrects the current ORR analysis and plots the corrected ORR curve """
-        if self.current_orr is None:
+        if self.current_main_data is None:
             return
-        self.current_orr.correct(orr_bckg=self.current_orr_bckg,
-                                 eis=self.current_eis)
+        self.current_main_data.correct(orr_bckg=self.current_background,
+                                       eis=self.current_eis)
         self.current_plot = plotter.plot(self, 'orr', label='Corrected ORR',
-                                         x_data=self.current_orr.corrected['Pot'],
-                                         y_data=self.current_orr.corrected['Cur'])[0]
+                                         x_data=self.current_main_data.corrected['Pot'],
+                                         y_data=self.current_main_data.corrected['Cur'])[0]
 
     def analyse_orr(self):
         """
         -creates instances of ORR analysis for anodic and cathodic scans and sets them as instance variable
         -clears the current plot and plots anodic and cathodic scans with parameters
         """
-        if self.current_orr is None:
+        if self.current_main_data is None:
             return
-        self.current_ano_analysis = DataHandler.OrrAnalysis(orr=self.current_orr.anodic)
+        self.current_ano_analysis = DataHandler.OrrAnalysis(orr=self.current_main_data.anodic)
         self.current_ano_analysis.stage = 'anodic'
-        self.current_cat_analysis = DataHandler.OrrAnalysis(orr=self.current_orr.cathodic)
+        self.current_cat_analysis = DataHandler.OrrAnalysis(orr=self.current_main_data.cathodic)
         self.current_cat_analysis.stage = 'cathodic'
         self.current_plot, axes_widget = plotter.plot(
             self,
             'orr',
             label=['Anodic', 'Cathodic'],
-            x_data=[self.current_orr.anodic['Pot'], self.current_orr.cathodic['Pot']],
-            y_data=[self.current_orr.anodic['Cur'], self.current_orr.cathodic['Cur']]
+            x_data=[self.current_main_data.anodic['Pot'], self.current_main_data.cathodic['Pot']],
+            y_data=[self.current_main_data.anodic['Cur'], self.current_main_data.cathodic['Cur']]
         )
         plotter.plot_parameters(
             self.current_plot,
@@ -260,7 +266,7 @@ class OrrTabContent(CW.TabContent):
 
     def export_data(self):
         """ asks for export directory and creates export instances for anodic and cathodic scans """
-        if self.current_orr is None:
+        if self.current_main_data is None:
             return
         export_dir = tkfilebrowser.askopendirname(initialdir='C:/Users/Marius/Documents/GitHub/EC_Auswertung/Daten')
         ano_export = DataHandler.ExportOrr(path=export_dir,
@@ -270,12 +276,6 @@ class OrrTabContent(CW.TabContent):
                                            analysis_instance=self.current_cat_analysis)
         cat_export.export_data()
 
-    def add_current_data(self):
-        label_list = [f'{data.name}:  {data.path.name}' for data in
-                      [self.current_orr, self.current_orr_bckg, self.current_eis] if data is not None]
-        self.add_labels(self.ids['data_labels'], label_list)
-        return
-
     def add_parameter_data(self):
         for box_id, instance in {'cathodic': self.current_cat_analysis, 'anodic': self.current_ano_analysis}.items():
             label_list = [str(round(abs(val), 3)) for val in instance.__dict__.values() if isinstance(val, float)]
@@ -284,44 +284,25 @@ class OrrTabContent(CW.TabContent):
             label_list = [self.parameter_dict[key] for key, val in instance.__dict__.items() if isinstance(val, float)]
             self.add_labels(self.ids[box_id], label_list)
 
-    def add_labels(self, label_box, label_list):
-        label_box.clear_widgets()
-        for text in label_list:
-            label_box.add_widget(Label(
-                text=text,
-                color=(0, 0, 0, 1),
-                font_size=14))
 
-    def clear_plot(self):
-        self.ids['plotter'].clear_widgets()
-        self.current_plot = None
-
-    def safe_plot_to_png(self):
-        if self.current_plot is None:
-            return
-        else:
-            self.current_plot.print_png(
-                f'{self.current_orr.path.parents[0] / self.current_orr.path.name.split(".")[0]}.png')
-
-
-class CvTabContent(CW.TabContent):
+class CvTabContent(CW.DataContent):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.current_plot = None
-        self.current_cv = None
+        self.current_main_data = None
 
     def import_cv(self):
-        if ScreenOne.import_data(self, 'current_cv', 'Cv') is False:
+        if ScreenOne.import_data(self, 'current_main_data', 'Cv') is False:
             return
 
 
-class TestbenchTabContent(CW.TabContent):
+class TestbenchTabContent(CW.DataContent):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.current_plot = None
         self.message_list = []
         self.current_eis_dict = None
-        self.current_cv = None
+        self.current_main_data = None
         self.current_lsv = None
         self.current_cv_analysis = None
         self.current_lsv_analysis = None
@@ -330,6 +311,12 @@ class TestbenchTabContent(CW.TabContent):
             'ecsa': 'EASA [m^2/g_Pt]',
             'h_cross': 'H2 Cross-over [mA/cm^2]'
         }
+
+    def add_current_data(self):
+        label_list = [f'{data.path.name}' for data in
+                      [self.current_main_data, self.current_lsv] if data is not None]
+        self.add_labels(self.ids['data_labels'], label_list)
+        return
 
     def import_lsv(self):
         """ imports LSV and saves as background instance variable """
@@ -355,22 +342,22 @@ class TestbenchTabContent(CW.TabContent):
 
     def import_cv(self):
         """ imports CV and saves it as instance variable """
-        if ScreenOne.import_data(self, 'current_cv', 'CvTestbench', 3, ',') is False:
+        if ScreenOne.import_data(self, 'current_main_data', 'CvTestbench', 3, ',') is False:
             return
         self.current_plot = plotter.plot(
             self,
             'cv',
             label='Raw CV',
-            x_data=self.current_cv.formatted['Pot'],
-            y_data=self.current_cv.formatted['Cur']
+            x_data=self.current_main_data.formatted['Pot'],
+            y_data=self.current_main_data.formatted['Cur']
         )[0]
         return
 
     def correct_cv(self):
         """ corrects the current CV and plots the corrected curve """
-        if self.current_cv is None or self.current_lsv is None:
+        if self.current_main_data is None or self.current_lsv is None:
             return
-        self.current_cv.correct(
+        self.current_main_data.correct(
             self.current_lsv.res_slope,
             self.current_lsv.res_intercept
         )
@@ -382,22 +369,22 @@ class TestbenchTabContent(CW.TabContent):
                 'Raw CV'
             ],
             x_data=[
-                self.current_cv.corrected['Pot'],
-                self.current_cv.formatted['Pot']
+                self.current_main_data.corrected['Pot'],
+                self.current_main_data.formatted['Pot']
             ],
             y_data=[
-                self.current_cv.corrected['Cur'],
-                self.current_cv.formatted['Cur']
+                self.current_main_data.corrected['Cur'],
+                self.current_main_data.formatted['Cur']
             ]
         )[0]
 
     def analyse_cv(self):
-        if self.current_cv is None:
+        if self.current_main_data is None:
             return
-        elif self.current_cv.corrected is None:
-            cv_df = self.current_cv.formatted
+        elif self.current_main_data.corrected is None:
+            cv_df = self.current_main_data.formatted
         else:
-            cv_df = self.current_cv.corrected
+            cv_df = self.current_main_data.corrected
 
         self.current_cv_analysis = DataHandler.CvAnalysis(cv_df)
         self.current_plot, axes_widget = plotter.plot(
@@ -432,10 +419,10 @@ class TestbenchTabContent(CW.TabContent):
 
     def export_data(self):
         """ asks for export directory and creates export instances for anodic and cathodic scans """
-        if self.current_cv is None and self.current_lsv is None:
+        if self.current_main_data is None and self.current_lsv is None:
             return
         export_dir = tkfilebrowser.askopendirname()
-        data_instances = [inst for inst in [self.current_lsv, self.current_cv] if inst is not None]
+        data_instances = [inst for inst in [self.current_lsv, self.current_main_data] if inst is not None]
         analysis_instances = [inst for inst in [self.current_lsv_analysis, self.current_cv_analysis] if
                               inst is not None]
         export = DataHandler.ExportTestbench(
@@ -444,12 +431,6 @@ class TestbenchTabContent(CW.TabContent):
             data_instances=data_instances
         )
         export.export_data()
-
-    def add_current_data(self):
-        label_list = [f'{data.name}:  {data.path.name}' for data in
-                      [self.current_cv, self.current_lsv] if data is not None]
-        self.add_labels(self.ids['data_labels'], label_list)
-        return
 
     def add_parameter_data(self):
         label_list = []
@@ -465,33 +446,20 @@ class TestbenchTabContent(CW.TabContent):
                     [self.parameter_dict[key] for key, val in instance.__dict__.items() if isinstance(val, float)])
         self.add_labels(self.ids['parameter'], label_list)
 
-    def add_labels(self, label_box, label_list):
-        label_box.clear_widgets()
-        for text in label_list:
-            label_box.add_widget(Label(
-                text=text,
-                color=(0, 0, 0, 1),
-                font_size=14))
 
-    def clear_plot(self):
-        self.ids['plotter'].clear_widgets()
-        self.current_plot = None
-
-    def safe_plot_to_png(self):
-        if self.current_plot is None:
-            return
-        else:
-            self.current_plot.print_png(
-                f'{self.current_orr.path.parents[0] / self.current_orr.path.name.split(".")[0]}.png')
-
-
-class PorosimetryTabContent(CW.TabContent):
+class PorosimetryTabContent(CW.DataContent):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.current_edit = None
         self.current_plot = None
-        self.current_porosity = None
+        self.current_main_data = None
         self.current_background = None
+
+    def add_current_data(self):
+        label_list = [f'{data.path.name}' for data in
+                      [self.current_main_data, self.current_background] if data is not None]
+        self.add_labels(self.ids['data_labels'], label_list)
+        return
 
     def import_porosity(self):
         """ imports porosity data, saves as instance variable and plots it """
@@ -504,35 +472,37 @@ class PorosimetryTabContent(CW.TabContent):
                 if 'EXPERIMENTAL DATA' in line:
                     row_skip = index + 1
 
-        if ScreenOne.import_data(self, 'current_porosity', 'Porosity', decimal=',', delimiter=';', skip_row=row_skip,
+        if ScreenOne.import_data(self, 'current_main_data', 'Porosity', decimal=',', delimiter=';', skip_row=row_skip,
                                  path=file_path) is False:
             return
         self.current_plot = plotter.plot(
             self,
             'porosity',
             label='Raw Porosity',
-            x_data=self.current_porosity.raw['ApplPressure'],
-            y_data=self.current_porosity.raw['IntrVolume']
+            x_data=self.current_main_data.raw['ApplPressure'],
+            y_data=self.current_main_data.raw['IntrVolume']
         )[0]
         active_screen = manager.get_screen(manager.current)
         active_screen.tab_manager.rename_current_instance(
-            new_name=self.current_porosity.path.name.split('.')[0]
+            new_name=self.current_main_data.path.name.split('.')[0]
         )
         return
 
-    def add_current_data(self):
-        label_list = [f'{data.name}:  {data.path.name}' for data in
-                      [self.current_porosity, self.current_background] if data is not None]
-        self.add_labels(self.ids['data_labels'], label_list)
-        return
+    def import_background(self):
+        """ imports porosity data, saves as instance variable and plots it """
+        file_path = Path(
+            tkfilebrowser.askopenfilename(
+                initialdir='H:/Doktorarbeit/Daten/Porosimetry')
+        )
+        with open(file_path, 'r') as f:
+            for index, line in enumerate(f.read().splitlines()):
+                if 'EXPERIMENTAL DATA' in line:
+                    row_skip = index + 1
 
-    def add_labels(self, label_box, label_list):
-        label_box.clear_widgets()
-        for text in label_list:
-            label_box.add_widget(Label(
-                text=text,
-                color=(0, 0, 0, 1),
-                font_size=14))
+        if ScreenOne.import_data(self, 'current_background', 'Porosity', decimal=',', delimiter=';', skip_row=row_skip,
+                                 path=file_path) is False:
+            return
+        return
 
 
 class SettingsTabContent(CW.TabContent):
