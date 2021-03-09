@@ -43,8 +43,8 @@ class Plotter:
             'x_label': 'Potential vs. RHE [V]'
         },
         'porosity': {
-            'y_label': 'Applied Pressure [MPa]',
-            'x_label': 'Intruded Pore Volume [mm3/g]'
+            'x_label': 'Applied Pressure [MPa]',
+            'y_label': 'Intruded Pore Volume [mm3/g]'
         }
     }
 
@@ -143,7 +143,7 @@ class ScreenOne(Screen):
             path = Path(
                 tkfilebrowser.askopenfilename(
                     # filetypes=[("Textfile", ".txt"), ('Textfile', ".csv")],
-                    initialdir='C:/Users/Marius/Documents/GitHub/EC_Auswertung/Daten')
+                    initialdir='H:/Masterarbeit/Daten/RDE/20190815_Fe-N-C_E3')
             )
         if str(path) == '.' or str(path) == '':
             return False
@@ -377,6 +377,7 @@ class TestbenchTabContent(CW.DataContent):
                 self.current_main_data.formatted['Cur']
             ]
         )[0]
+        return
 
     def analyse_cv(self):
         if self.current_main_data is None:
@@ -399,6 +400,7 @@ class TestbenchTabContent(CW.DataContent):
             axes_widget,
             self.current_cv_analysis.ecsa_curve
         )
+        return
 
     def analyse_lsv(self):
         if self.current_lsv is None:
@@ -416,6 +418,7 @@ class TestbenchTabContent(CW.DataContent):
             x_data=lsv_df['Pot'],
             y_data=lsv_df['Cur']
         )
+        return
 
     def export_data(self):
         """ asks for export directory and creates export instances for anodic and cathodic scans """
@@ -430,7 +433,7 @@ class TestbenchTabContent(CW.DataContent):
             analysis_instances=analysis_instances,
             data_instances=data_instances
         )
-        export.export_data()
+        return export.export_data()
 
     def add_parameter_data(self):
         label_list = []
@@ -445,6 +448,7 @@ class TestbenchTabContent(CW.DataContent):
                 label_list.extend(
                     [self.parameter_dict[key] for key, val in instance.__dict__.items() if isinstance(val, float)])
         self.add_labels(self.ids['parameter'], label_list)
+        return
 
 
 class PorosimetryTabContent(CW.DataContent):
@@ -467,20 +471,38 @@ class PorosimetryTabContent(CW.DataContent):
             tkfilebrowser.askopenfilename(
                 initialdir='H:/Doktorarbeit/Daten/Porosimetry')
         )
+        if str(file_path) == '.' or str(file_path) == '':
+            return False
         with open(file_path, 'r') as f:
             for index, line in enumerate(f.read().splitlines()):
                 if 'EXPERIMENTAL DATA' in line:
                     row_skip = index + 1
 
-        if ScreenOne.import_data(self, 'current_main_data', 'Porosity', decimal=',', delimiter=';', skip_row=row_skip,
-                                 path=file_path) is False:
+        if ScreenOne.import_data(
+                self,
+                'current_main_data',
+                'Porosity',
+                decimal=',',
+                delimiter=';',
+                skip_row=row_skip,
+                path=file_path
+        ) is False:
             return
         self.current_plot = plotter.plot(
             self,
             'porosity',
-            label='Raw Porosity',
-            x_data=self.current_main_data.raw['ApplPressure'],
-            y_data=self.current_main_data.raw['IntrVolume']
+            label=[
+                'Increasing Pressure',
+                'Decreasing Pressure'
+            ],
+            x_data=[
+                self.current_main_data.formatted['ApplPressure'],
+                self.current_main_data.formatted['Press.dec(MPa)']
+            ],
+            y_data=[
+                self.current_main_data.formatted['IntrVolume'],
+                self.current_main_data.formatted['Vol.dec(mm/g)']
+            ]
         )[0]
         active_screen = manager.get_screen(manager.current)
         active_screen.tab_manager.rename_current_instance(
@@ -499,9 +521,42 @@ class PorosimetryTabContent(CW.DataContent):
                 if 'EXPERIMENTAL DATA' in line:
                     row_skip = index + 1
 
-        if ScreenOne.import_data(self, 'current_background', 'Porosity', decimal=',', delimiter=';', skip_row=row_skip,
-                                 path=file_path) is False:
+        if ScreenOne.import_data(
+                self,
+                'current_background',
+                'Porosity',
+                decimal=',',
+                delimiter=';',
+                skip_row=row_skip,
+                path=file_path
+        ) is False:
             return
+        return
+
+    def correct_data(self):
+        if self.current_main_data is None or self.current_background is None:
+            return
+        if self.current_main_data.subtract_background(
+            self.current_main_data,
+            self.current_background
+        ) is False:
+            return
+        self.current_plot = plotter.plot(
+            self,
+            'porosity',
+            label=[
+                'Increasing Pressure',
+                'Decreasing Pressure'
+            ],
+            x_data=[
+                self.current_main_data.corrected['ApplPressure'],
+                self.current_main_data.corrected['Press.dec(MPa)']
+            ],
+            y_data=[
+                self.current_main_data.corrected['IntrVolume'],
+                self.current_main_data.corrected['Vol.dec(mm/g)']
+            ]
+        )[0]
         return
 
 

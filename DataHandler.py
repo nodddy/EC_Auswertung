@@ -96,13 +96,8 @@ class Orr(Data):
         scan2 = raw_orr.query('Scan == 3')
         scan2.reset_index(inplace=True)
         formatted_orr = pd.DataFrame()
-        formatted_orr['Pot'] = ((scan1['Pot'] + scan2['Pot']) / 2)
-        formatted_orr['Cur'] = ((scan1['Cur'] + scan2['Cur']) / 2)
-        try:
-            formatted_orr['Ring'] = ((scan1['Ring'] + scan2['Ring']) / 2)
-        except KeyError:
-            pass
-
+        for column in scan1:
+            formatted_orr[column] = ((scan1[column] + scan2[column]) / 2)
         half_scan_end = int(len(formatted_orr.index) / 2)
         self.anodic = formatted_orr.iloc[40:half_scan_end - 40]
         self.cathodic = formatted_orr.iloc[half_scan_end + 40:-40][::-1]
@@ -141,8 +136,8 @@ class OrrBckg(Data):
         scan2 = raw_orr.query('Scan == 3')
         scan2.reset_index(inplace=True)
         formatted_orr = pd.DataFrame()
-        formatted_orr['Pot'] = ((scan1['Pot'] + scan2['Pot']) / 2)
-        formatted_orr['Cur'] = ((scan1['Cur'] + scan2['Cur']) / 2)
+        for column in scan1:
+            formatted_orr[column] = ((scan1[column] + scan2[column]) / 2)
         return formatted_orr.reset_index()
 
 
@@ -267,6 +262,19 @@ class Porosity(Data):
         super().__init__(raw_data, path)
         self.name = 'Porosity'
         self.parameter_dict = self.parameters_from_file()
+        self.formatted = self.format()
+
+    def format(self):
+        def convert_str_to_float(col):
+            new_col = col.str.strip()
+            new_col = new_col.str.replace(',', '.')
+            return pd.to_numeric(new_col).dropna()
+
+        data = self.raw.copy(deep=True).dropna()
+        for column in data:
+            if data[column].dtypes == object:
+                data[column] = convert_str_to_float(data[column])
+        return data
 
     def parameters_from_file(self):
         """
@@ -288,6 +296,18 @@ class Porosity(Data):
             i = iter(item)
             param_dict.update(dict(zip(i, i)))
         return param_dict
+
+    def subtract_background(self, main_data, background):
+        if main_data.formatted.size != background.formatted.size:
+            return False
+        new_df = pd.DataFrame()
+        new_df['ApplPressure'] = main_data.formatted['ApplPressure']
+        new_df['Press.dec(MPa)'] = main_data.formatted['Press.dec(MPa)']
+        for column in main_data.formatted:
+            if column != 'ApplPressure' and column != 'Press.dec(MPa)':
+                new_df[column] = main_data.formatted[column] - background.formatted[column]
+        self.corrected = new_df
+        return
 
 
 class Analysis:
