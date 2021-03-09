@@ -263,14 +263,24 @@ class Porosity(Data):
         self.name = 'Porosity'
         self.parameter_dict = self.parameters_from_file()
         self.formatted = self.format()
+        self.corrected_parameters = None
 
     def format(self):
-        def convert_str_to_float(col):
+        """
+        formatting of raw import data:
+            -check for non-numeric column value and convert to float
+        return: new formatted dataframe
+        """
+
+        def convert_str_to_float(col: pd.Series):
+            """
+            converts strings in series like '   4,564  ' to floats like '4.564'
+            """
             new_col = col.str.strip()
             new_col = new_col.str.replace(',', '.')
             return pd.to_numeric(new_col).dropna()
 
-        data = self.raw.copy(deep=True).dropna()
+        data = self.raw.copy(deep=True)
         for column in data:
             if data[column].dtypes == object:
                 data[column] = convert_str_to_float(data[column])
@@ -284,7 +294,9 @@ class Porosity(Data):
         with open(self.path, 'r') as f:
             file_lines = f.read().splitlines()
         first_index = None
+        first_index2 = None
         last_index = None
+        last_index2 = None
         param_dict = {}
         for index, line in enumerate(file_lines):
             if 'RESULTS WITHOUT COMPRESSIB. CORR.' in line:
@@ -295,18 +307,48 @@ class Porosity(Data):
         for item in [item.replace(' ', '').split(';') for item in file_lines[first_index + 1:last_index]]:
             i = iter(item)
             param_dict.update(dict(zip(i, i)))
+        for index, line in enumerate(file_lines):
+            if 'TOTAL PORE SIZE' in line:
+                first_index2 = index
+            if first_index2 is not None and '' == line:
+                last_index2 = index
+                break
+        for item in [item.replace(' ', '').split(';') for item in file_lines[first_index2 + 1:last_index2]]:
+            i = iter(item)
+            param_dict.update(dict(zip(i, i)))
         return param_dict
 
     def subtract_background(self, main_data, background):
-        if main_data.formatted.size != background.formatted.size:
+        def data_subtraction(data: pd.DataFrame, background: pd.DataFrame):
+            if data.size != background.size:
+                return False
+            new_df = pd.DataFrame()
+            new_df['ApplPressure'] = data['ApplPressure']
+            new_df['Press.dec(MPa)'] = data['Press.dec(MPa)']
+            for column in data:
+                if column != 'ApplPressure' and column != 'Press.dec(MPa)':
+                    new_df[column] = data[column] - background[column]
+            return new_df
+
+        def parameter_subtraction(param_dict: dict, background_dict: dict):
+            result_dict = {}
+            for k, v in param_dict.items():
+                try:
+                    result_dict[k] = round(float(v.replace(',', '.')) - float(background_dict[k].replace(',', '.')), 3)
+                except KeyError:
+                    pass
+                except ValueError:
+                    result_dict[k] = v
+            if result_dict is False:
+                return None
+            else:
+                print(result_dict)
+                return result_dict
+
+        self.corrected_parameters = parameter_subtraction(main_data.parameter_dict, background.parameter_dict)
+        self.corrected = data_subtraction(main_data.formatted, background.formatted)
+        if self.corrected is False:
             return False
-        new_df = pd.DataFrame()
-        new_df['ApplPressure'] = main_data.formatted['ApplPressure']
-        new_df['Press.dec(MPa)'] = main_data.formatted['Press.dec(MPa)']
-        for column in main_data.formatted:
-            if column != 'ApplPressure' and column != 'Press.dec(MPa)':
-                new_df[column] = main_data.formatted[column] - background.formatted[column]
-        self.corrected = new_df
         return
 
 
@@ -505,6 +547,54 @@ class ExportOrr(Export):
 
 
 class ExportTestbench(Export):
+    def __init__(self, path, analysis_instances, data_instances):
+        super().__init__(path)
+        if type(data_instances) is not list: data_instances = [data_instances]
+        self.data_instances = data_instances
+        if type(analysis_instances) is not list: analysis_instances = [analysis_instances]
+        self.analysis_instances = analysis_instances
+
+    def parameters_to_export_str(self):
+        """
+        writes a pandas dataframe as .csv to a directory provided
+        :param analysis_instance: the analysis instance containing all parameters as instance variables
+        :return: string to be exported
+        """
+        export_str = 'Parameter\tValue'
+        for instance in self.analysis_instances:
+            for key, val in instance.__dict__.items():
+                if isinstance(val, float):
+                    export_str = f'{export_str}\n{key}\t{val}'
+        return export_str
+
+    def export_data(self):
+        """
+        writes ORR dataframes to csv and parameters as txt file to the path variable of the instance
+        """
+        for instance in self.data_instances:
+            export_df = instance.formatted.copy(deep=True)
+            export_df = self.rename_header(export_df)
+            export_df.to_csv(
+                self.path / f'{instance.path.name.split(".")[0]}_raw.txt',
+                columns=['Potential vs. RHE [V]', 'Current Density [mA/cm^2]'],
+                index=False
+            )
+            if instance.corrected is not None:
+                export_df = instance.corrected.copy(deep=True)
+                export_df = self.rename_header(export_df)
+                export_df.to_csv(
+                    self.path / f'{instance.path.name.split(".")[0]}_corrected.txt',
+                    columns=['Potential vs. RHE [V]', 'Current Density [mA/cm^2]'],
+                    index=False
+                )
+
+        self.str_to_file(
+            export_str=self.parameters_to_export_str(),
+            file_name=f'{self.data_instances[0].path.name.split("_")[1]}_parameters.txt'
+        )
+
+
+class ExportPorosity(Export):
     def __init__(self, path, analysis_instances, data_instances):
         super().__init__(path)
         if type(data_instances) is not list: data_instances = [data_instances]

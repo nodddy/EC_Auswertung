@@ -559,6 +559,14 @@ class PorosimetryTabContent(CW.DataContent):
         )[0]
         return
 
+    def export_data(self):
+        """ asks for export directory and creates export instances for anodic and cathodic scans """
+        if self.current_main_data is None:
+            return
+        export_dir = tkfilebrowser.askopendirname(initialdir='H:/Doktorarbeit/Daten/Porosimetry')
+        export = DataHandler.ExportPorosity(path=export_dir,
+                                           analysis_instance=self.current_main_data)
+        export.export_data()
 
 class SettingsTabContent(CW.TabContent):
     def __init__(self, **kwargs):
