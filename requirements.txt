@@ -33,4 +33,4 @@ scipy==1.4.1
 six==1.14.0
 sklearn==0.0
 tkfilebrowser==2.3.2
-urllib3==1.25.8
+urllib3==1.26.5
