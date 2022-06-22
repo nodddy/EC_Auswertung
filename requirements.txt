@@ -15,7 +15,7 @@ kivy-deps.sdl2==0.1.23
 Kivy-Garden==0.1.4
 kiwisolver==1.1.0
 matplotlib==3.2.0
-numpy==1.18.1
+numpy==1.22.0
 pandas==1.0.1
 pathlib==1.0.1
 pefile==2019.4.18
