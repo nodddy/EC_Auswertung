@@ -7,7 +7,7 @@ cycler==0.10.0
 docutils==0.16
 future==0.18.2
 idna==2.9
-joblib==0.14.1
+joblib==1.2.0
 Kivy==1.11.1
 kivy-deps.angle==0.1.10
 kivy-deps.glew==0.1.12
